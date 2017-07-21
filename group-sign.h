@@ -83,6 +83,7 @@ int verifyGroupPublicKey(struct GroupPublicKey *pub);
 int join_finish_client(struct GroupPublicKey *pub, struct UserPrivateKey *priv, struct JoinResponse *resp);
 
 // msg and octet len should be 32 bytes!!! just do sha256 before.
-void sign(csprng *RNG, struct UserPrivateKey *priv, octet *msg, octet *bsn, struct Signature *sig);
+void sign(csprng *RNG, struct UserPrivateKey *priv, char *msg, char *bsn, struct Signature *sig);
 
-int verify(octet *msg, octet *bsn, struct Signature *sig, struct GroupPublicKey *pub);
+// msg and octet len should be 32 bytes!!! just do sha256 before.
+int verify(char *msg, char *bsn, struct Signature *sig, struct GroupPublicKey *pub);

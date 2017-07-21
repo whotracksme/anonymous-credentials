@@ -8,6 +8,23 @@
 
 #define ECP2SIZE (4*MODBYTES)
 
+
+/* map octet string containing hash to point on curve of correct order */
+// from milagro-crypto-c (mpin.c)
+static void mapit(char *h,ECP *P)
+{
+    BIG q,x,c;
+    BIG_fromBytes(x,h);
+    BIG_rcopy(q,Modulus);
+    BIG_mod(x,q);
+
+    while (!ECP_setx(P,x,0))
+        BIG_inc(x,1);
+
+    BIG_rcopy(c,CURVE_Cof);
+    ECP_mul(P,c);
+}
+
 static void setG1(ECP* X)
 {
     BIG x, y;
@@ -125,8 +142,11 @@ static void ECPchallengeEquals(ECP* G1, ECP* G2, ECP* U1, ECP* U2, ECP* A1, ECP*
     BIG_fromBytes(c, hh); // MODBYTES == 32!!!
 }
 
-static void makeECPProofEquals(ECP* G1, ECP* G2, ECP* U1, ECP* U2, BIG x, BIG r, ECP* A1, ECP* A2, BIG z, octet *extra)
+static void makeECPProofEquals(csprng* RNG, ECP* G1, ECP* G2, ECP* U1, ECP* U2, BIG x, ECP* A1, ECP* A2, BIG z, octet *extra)
 {
+    BIG r;
+    randomModOrder(r, RNG);
+
     BIG order;
     BIG_rcopy(order, CURVE_Order);
 
@@ -297,9 +317,7 @@ int join_server(csprng *RNG, struct GroupPrivateKey *priv, struct JoinMessage *j
         ECP_add(C, D);
         PAIR_G1mul(C, priv->x);
 
-        randomModOrder(r, RNG);
-
-        makeECPProofEquals(&G, Q, B, D, tmp, r, &resp->A1, &resp->A2, resp->z, 0);
+        makeECPProofEquals(RNG, &G, Q, B, D, tmp, &resp->A1, &resp->A2, resp->z, 0);
     }
     return ok;
 }
@@ -346,36 +364,6 @@ int verifyGroupPublicKey(struct GroupPublicKey *pub)
         && verifyECP2Proof(&W, &pub->Y, &pub->T, pub->ry);
 }
 
-// FIXME!!: WHY Fig4. Protocol is different than the explanation?
-// Can we optimize with multipairing?? PAIR_double_ate
-// int verifyAux(ECP* A, ECP* B, ECP* C, ECP* D, ECP2* X, ECP2 *Y)
-// {
-//     FP12 w, y;
-//     ECP2 G2;
-//     setG2(&G2);
-
-//     // a != 1
-//     if (ECP_isinf(A)) {
-//         return 0;
-//     }
-
-
-
-//     // e(a, Y) == e(b, g2) and e(c, g2) == e(a · d, X)?
-//     // Can this be optimized?
-//     PAIR_double_ate(&w, X, A, Y, C);
-//     PAIR_fexp(&w);
-//     PAIR_ate(&y, &G2, B);
-//     PAIR_fexp(&y);
-//     if (!FP12_equals(&w, &y)) {
-//         return 0;
-//     }
-
-//     return 1;
-// }
-
-
-
 int join_finish_client(struct GroupPublicKey *pub, struct UserPrivateKey *priv, struct JoinResponse *resp)
 {
     ECP G;
@@ -389,37 +377,6 @@ int join_finish_client(struct GroupPublicKey *pub, struct UserPrivateKey *priv, 
         return 0;
     }
 
-
-    // FP12 w, y;
-    // ECP2 G2;
-    // setG2(&G2);
-
-    // // a != 1
-    // if (ECP_isinf(&resp->cred.A)) {
-    //     return 0;
-    // }
-
-    // // e(a, Y) == e(b, g2) and e(c, g2) == e(a · d, X)?
-    // // Can this be optimized?
-    // PAIR_ate(&w, &pub->Y, &resp->cred.A);
-    // PAIR_fexp(&w);
-    // PAIR_ate(&y, &G2, &resp->cred.B);
-    // PAIR_fexp(&y);
-    // if (!FP12_equals(&w, &y)) {
-    //     return 0;
-    // }
-
-    // ECP AA;
-    // ECP_copy(&AA, &resp->cred.A);
-    // ECP_add(&AA, &resp->cred.D);
-    // PAIR_ate(&w, &pub->X, &AA);
-    // PAIR_fexp(&w);
-    // PAIR_ate(&y, &G2, &resp->cred.C);
-    // PAIR_fexp(&y);
-    // if (!FP12_equals(&w, &y)) {
-    //     return 0;
-    // }
-
     ECP_copy(&priv->cred.A, &resp->cred.A);
     ECP_copy(&priv->cred.B, &resp->cred.B);
     ECP_copy(&priv->cred.C, &resp->cred.C);
@@ -428,97 +385,54 @@ int join_finish_client(struct GroupPublicKey *pub, struct UserPrivateKey *priv, 
     return 1;
 }
 
-// msg and octet len should be 32 bytes!!! just do sha256 before.
-void sign(csprng *RNG, struct UserPrivateKey *priv, octet *msg, octet *bsn, struct Signature *sig)
+// msg and octet len should be 32 bytes!!! Assuming sha256 is performed on original input.
+void sign(csprng *RNG, struct UserPrivateKey *priv, char *msg, char *bsn, struct Signature *sig)
 {
-    int i;
-    // TODO: limit msg and bsn sizes
-    char hh_msg[32], hh_bsn[32], hh_msg_bsn[32];
-    hash256 h_msg;
-    hash256 h_bsn;
-    hash256 h_msg_bsn;
-    HASH256_init(&h_msg);
-    HASH256_init(&h_bsn);
-    HASH256_init(&h_msg_bsn);
-    for (i=0; i < msg->len; i++) HASH256_process(&h_msg, msg->val[i]);
-    for (i=0; i < bsn->len; i++) HASH256_process(&h_bsn, bsn->val[i]);
-    HASH256_hash(&h_msg, hh_msg);
-    HASH256_hash(&h_bsn, hh_bsn);
-    for (i=0; i < 32; ++i) HASH256_process(&h_msg_bsn, hh_msg[i]);
-    for (i=0; i < 32; ++i) HASH256_process(&h_msg_bsn, hh_bsn[i]);
-    HASH256_hash(&h_msg_bsn, hh_msg_bsn);
-
-    octet HH_MSG_BSN = {32, 32, hh_msg_bsn};
-
-    ECP G;
-    setG1(&G);
-
-    BIG r;
-    randomModOrder(r, RNG);
-
     ECP_copy(&sig->A, &priv->cred.A);
     ECP_copy(&sig->B, &priv->cred.B);
     ECP_copy(&sig->C, &priv->cred.C);
     ECP_copy(&sig->D, &priv->cred.D);
 
+    // Randomize credentials for signature
+    BIG r;
+    randomModOrder(r, RNG);
     PAIR_G1mul(&sig->A, r);
     PAIR_G1mul(&sig->B, r);
     PAIR_G1mul(&sig->C, r);
     PAIR_G1mul(&sig->D, r);
 
-    BIG bsnExp;
-    BIG_fromBytes(bsnExp, hh_bsn);
+    // Map basename to point in G1 (bsn should be 32 bytes and result of crypto hash like sha256)
     ECP BSN;
-    ECP_copy(&BSN, &G);
-    ECP_mul(&BSN, bsnExp);
+    mapit(bsn, &BSN);
     ECP_copy(&sig->NYM, &BSN);
     PAIR_G1mul(&sig->NYM, priv->gsk);
 
-    randomModOrder(r, RNG);
-    makeECPProofEquals(&sig->B, &BSN, &sig->D, &sig->NYM, priv->gsk, r, &sig->A1, &sig->A2, sig->z, &HH_MSG_BSN);
+    // Compute sha256(msg || bsn) to be used in proof of equality
+    char hh_msg_bsn[32];
+    hash256 h_msg_bsn;
+    HASH256_init(&h_msg_bsn);
+    for (int i=0; i < 32; ++i) HASH256_process(&h_msg_bsn, msg[i]);
+    for (int i=0; i < 32; ++i) HASH256_process(&h_msg_bsn, bsn[i]);
+    HASH256_hash(&h_msg_bsn, hh_msg_bsn);
+    octet HH_MSG_BSN = {32, 32, msg};
+
+    makeECPProofEquals(RNG, &sig->B, &BSN, &sig->D, &sig->NYM, priv->gsk, &sig->A1, &sig->A2, sig->z, &HH_MSG_BSN);
 }
 
-int verify(octet *msg, octet *bsn, struct Signature *sig, struct GroupPublicKey *pub)
+int verify(char *msg, char *bsn, struct Signature *sig, struct GroupPublicKey *pub)
 {
-    int i;
-    // TODO: limit msg and bsn sizes
-    char hh_msg[32], hh_bsn[32], hh_msg_bsn[32];
-    hash256 h_msg;
-    hash256 h_bsn;
-    hash256 h_msg_bsn;
-    HASH256_init(&h_msg);
-    HASH256_init(&h_bsn);
-    HASH256_init(&h_msg_bsn);
-    for (i=0; i < msg->len; i++) HASH256_process(&h_msg, msg->val[i]);
-    for (i=0; i < bsn->len; i++) HASH256_process(&h_bsn, bsn->val[i]);
-    HASH256_hash(&h_msg, hh_msg);
-    HASH256_hash(&h_bsn, hh_bsn);
-    for (i=0; i < 32; ++i) HASH256_process(&h_msg_bsn, hh_msg[i]);
-    for (i=0; i < 32; ++i) HASH256_process(&h_msg_bsn, hh_bsn[i]);
-    HASH256_hash(&h_msg_bsn, hh_msg_bsn);
-
-    octet HH_MSG_BSN = {32, 32, hh_msg_bsn};
-
-    ECP G;
-    setG1(&G);
-
-    BIG bsnExp;
-    BIG_fromBytes(bsnExp, hh_bsn);
+    // Map basename to point in G1 (bsn should be 32 bytes and result of crypto hash like sha256)
     ECP BSN;
-    ECP_copy(&BSN, &G);
-    ECP_mul(&BSN, bsnExp);
+    mapit(bsn, &BSN);
 
-    // NYM should be the same for different messages as long as the
-    // basename (BSN) is the same (and the user private key, group key, etc. are the same), and different otherwise.
-
-    // The rest of the signature should always be different for every signature, even if the signed message is the same
-    // ECP_output(&sig->NYM);
-    // ECP_output(&sig->A);
-    // ECP_output(&sig->B);
-    // ECP_output(&sig->C);
-    // ECP_output(&sig->D);
-    // ECP_output(&sig->A1);
-    // ECP_output(&sig->A2);
+    // Compute sha256(msg || bsn) to be used in proof of equality
+    char hh_msg_bsn[32];
+    hash256 h_msg_bsn;
+    HASH256_init(&h_msg_bsn);
+    for (int i=0; i < 32; ++i) HASH256_process(&h_msg_bsn, msg[i]);
+    for (int i=0; i < 32; ++i) HASH256_process(&h_msg_bsn, bsn[i]);
+    HASH256_hash(&h_msg_bsn, hh_msg_bsn);
+    octet HH_MSG_BSN = {32, 32, msg};
 
     return verifyECPProofEquals(&sig->B, &BSN, &sig->D, &sig->NYM, &sig->A1, &sig->A2, sig->z, &HH_MSG_BSN)
      && !ECP_isinf(&sig->A) && !ECP_isinf(&sig->B)

@@ -61,26 +61,24 @@ int main(void)
     // We can anonymously sign as many messages as we want!!
 
     struct Signature sig;
-    char msg[] = "hola que talf";
-    char bsn[] = "this is a basenamea";
-
-    octet MSG = {sizeof(msg), sizeof(msg), msg};
-    octet BSN = {sizeof(bsn), sizeof(bsn), bsn};
+    // Note that in a real app these should be sha256 outputs, so exactly 32 bytes
+    char msg[] = "hola que talf hola que talf hola que talf hola que talf hola que talf hola que talf hola que talf hola que talf hola que talf";
+    char bsn[] = "this is a basenamea hola que talf hola que talf hola que talf hola que talf hola que talf hola que talf hola que talf hola que talf hola que talf";
 
     clock_t start=clock();
     res = 1;
-    sign(&RNG, &userPriv, &MSG, &BSN, &sig);
+    sign(&RNG, &userPriv, msg, bsn, &sig);
     int iterations = 500;
     for (i = 0; i <iterations; ++i) {
         // res &= verify(&MSG, &BSN, &sig, &priv.pub);
-        sign(&RNG, &userPriv, &MSG, &BSN, &sig);
+        sign(&RNG, &userPriv, msg, bsn, &sig);
     }
 
     double elapsed=(clock()-start)/(double)CLOCKS_PER_SEC;
     elapsed=1000.0*elapsed/iterations;
     printf(" %8.2lf ms per iteration\n",elapsed);
 
-    res &= verify(&MSG, &BSN, &sig, &priv.pub);
+    res &= verify(msg, bsn, &sig, &priv.pub);
     printf("res %d\n", res);
 
     ECP_output(&sig.NYM);
@@ -91,7 +89,7 @@ int main(void)
     ECP_output(&sig.A1);
     ECP_output(&sig.A2);
 
-    // sign: 6.5ms per signature, 10ms in Firefox and 12 ms in chromium
+    // sign: 6.5ms per signature (native), 9ms in Firefox and 10 ms in V8 (node v8.1.4)
     // verify: 19ms per signature (clang -O3 -march=native). Is the compiler optimizing it away?
 
     KILL_CSPRNG(&RNG);
