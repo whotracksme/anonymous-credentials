@@ -70,166 +70,171 @@ static void addECPHash(hash256* h, ECP* P)
     for (int i=0; i<ECPSIZE; i++) HASH256_process(h,TMP.val[i]);
 }
 
-static void ECP2challenge(ECP2* G, ECP2* Y, ECP2* T, BIG c)
+static void ECP2challenge(ECP2* Y, ECP2* G, ECP2* GR, BIG c)
 {
     hash256 sha256;
     HASH256_init(&sha256);
 
-    addECP2Hash(&sha256, G);
     addECP2Hash(&sha256, Y);
-    addECP2Hash(&sha256, T);
+    addECP2Hash(&sha256, G);
+    addECP2Hash(&sha256, GR);
 
     char hh[32];
     HASH256_hash(&sha256, hh);
-    BIG_fromBytes(c, hh); // MODBYTES == 32!!!
+    BIG_fromBytesLen(c, hh, 32);
+    BIG order;
+    BIG_rcopy(order, CURVE_Order);
+    BIG_mod(c, order);
+    BIG_norm(c); // Needed?
 }
 
-static void ECPchallenge(ECP* G, ECP* Y, ECP* T, octet *message, BIG c)
+// perhaps could refector with templates
+// assuming message is 32 bytes long (or null pointer)
+static void ECPchallenge(char* message, ECP* Y, ECP* G, ECP* GR, BIG c)
 {
     hash256 sha256;
     HASH256_init(&sha256);
-
-    addECPHash(&sha256, G);
+    if (message) {
+      for (int i = 0; i < 32; ++i) {
+        HASH256_process(&sha256, message[i]);
+      }
+    }
     addECPHash(&sha256, Y);
-    addECPHash(&sha256, T);
+    addECPHash(&sha256, G);
+    addECPHash(&sha256, GR);
+    char hh[32];
+    HASH256_hash(&sha256, hh);
+    BIG_fromBytesLen(c, hh, 32);
+    BIG order;
+    BIG_rcopy(order, CURVE_Order);
+    BIG_mod(c, order);
+    BIG_norm(c); // Needed?
+}
+
+// make POK of X such that Y = G ** X
+// v is a random integer mod group order
+// output is T, r
+static void makeECPProof(csprng* RNG, ECP* G, ECP* Y, BIG x, char *message, BIG c, BIG s)
+{
+    BIG r, order;
+    randomModOrder(r, RNG);
+    ECP GR;
+    ECP_copy(&GR, G);
+    PAIR_G1mul(&GR, r);
+    ECPchallenge(message, Y, G, &GR, c);
+    BIG_rcopy(order, CURVE_Order);
+    BIG_modmul(s, c, x, order);
+    BIG_modneg(s, s, order);
+    BIG_add(s, s, r);
+    BIG_mod(s, order);
+}
+
+static void ECPchallengeEquals(char* message, ECP* Y, ECP* Z, ECP* A, ECP* B, ECP* AR, ECP* BR, BIG c)
+{
+    hash256 sha256;
+    HASH256_init(&sha256);
 
     if (message) {
-        for (int i=0; i<message->len; i++) HASH256_process(&sha256,message->val[i]);
+        for (int i = 0; i < 32; ++i) HASH256_process(&sha256, message[i]);
     }
+
+    addECPHash(&sha256, Y);
+    addECPHash(&sha256, Z);
+    addECPHash(&sha256, A);
+    addECPHash(&sha256, B);
+    addECPHash(&sha256, AR);
+    addECPHash(&sha256, BR);
 
     char hh[32];
     HASH256_hash(&sha256, hh);
-    BIG_fromBytes(c, hh); // MODBYTES == 32!!!
-}
-
-// make POK of X such that Y = G ** X
-// v is a random integer mod group order
-// output is T, r
-static void makeECPProof(ECP* G, ECP* Y, BIG x, BIG v, ECP* T, octet *message, BIG r)
-{
+    BIG_fromBytesLen(c, hh, 32);
     BIG order;
     BIG_rcopy(order, CURVE_Order);
-
-    ECP_copy(T, G);
-    PAIR_G1mul(T, v); // T = G ** v
-
-    // c = H(G, Y, T, message)
-    ECPchallenge(G, Y, T, message, r);
-    BIG_modmul(r, r, x, order);
-    BIG_modneg(r, r, order);
-    BIG_add(r, r, v);
-    BIG_mod(r, order);
+    BIG_mod(c, order);
+    BIG_norm(c); // Needed?
 }
 
-static void ECPchallengeEquals(ECP* G1, ECP* G2, ECP* U1, ECP* U2, ECP* A1, ECP* A2, BIG c, octet *extra)
+static void makeECPProofEquals(csprng* RNG, ECP* A, ECP* B, ECP* Y, ECP* Z, BIG x, char* message, BIG c, BIG s)
 {
-    hash256 sha256;
-    HASH256_init(&sha256);
-
-    addECPHash(&sha256, G1);
-    addECPHash(&sha256, G2);
-    addECPHash(&sha256, U1);
-    addECPHash(&sha256, U2);
-    addECPHash(&sha256, A1);
-    addECPHash(&sha256, A2);
-
-    if (extra) {
-        for (int i = 0; i < extra->len; ++i) HASH256_process(&sha256, extra->val[i]);
-    }
-
-    char hh[32];
-    HASH256_hash(&sha256, hh);
-    BIG_fromBytes(c, hh); // MODBYTES == 32!!!
-}
-
-static void makeECPProofEquals(csprng* RNG, ECP* G1, ECP* G2, ECP* U1, ECP* U2, BIG x, ECP* A1, ECP* A2, BIG z, octet *extra)
-{
-    BIG r;
+    BIG r, order;
     randomModOrder(r, RNG);
-
-    BIG order;
+    ECP AR, BR;
+    ECP_copy(&AR, A);
+    ECP_copy(&BR, B);
+    PAIR_G1mul(&AR, r);
+    PAIR_G1mul(&BR, r);
+    ECPchallengeEquals(message, Y, Z, A, B, &AR, &BR, c);
     BIG_rcopy(order, CURVE_Order);
-
-    ECP_copy(A1, G1);
-    ECP_copy(A2, G2);
-    PAIR_G1mul(A1, r);
-    PAIR_G1mul(A2, r);
-
-    ECPchallengeEquals(G1, G2, U1, U2, A1, A2, z, extra);
-
-    BIG_modmul(z, z, x, order);
-    BIG_add(z, z, r);
-    BIG_mod(z, order);
+    BIG_modmul(s, c, x, order);
+    BIG_modneg(s, s, order);
+    BIG_add(s, s, r);
+    BIG_mod(s, order);
 }
 
 // POK of X such that Y = G ** X
 // verify that T = (G ** R) * (Y ** C), C = H(G, Y, T)
-static int verifyECPProof(ECP* G, ECP* Y, ECP* T, octet *message, BIG r)
+static int verifyECPProof(ECP* G, ECP* Y, char *message, BIG c, BIG s)
 {
-    BIG c;
-    ECPchallenge(G, Y, T, message, c);
-    ECP GG, YY;
-    ECP_copy(&GG, G);
-    ECP_copy(&YY, Y);
-    PAIR_G1mul(&GG, r);
-    PAIR_G1mul(&YY, c);
-    ECP_add(&GG, &YY);
-    return ECP_equals(&GG, T);
+    ECP GS, YC;
+    ECP_copy(&GS, G);
+    ECP_copy(&YC, Y);
+    PAIR_G1mul(&GS, s);
+    PAIR_G1mul(&YC, c);
+    ECP_add(&GS, &YC);
+    BIG cc;
+    ECPchallenge(message, Y, G, &GS, cc);
+    return BIG_comp(c, cc) == 0;
 }
 
-static int verifyECPProofEquals(ECP* G1, ECP* G2, ECP* U1, ECP* U2, ECP* A1, ECP* A2, BIG z, octet *extra)
+static int verifyECPProofEquals(ECP* A, ECP* B, ECP* Y, ECP* Z, char* message, BIG c, BIG s)
 {
-    ECP GG1, GG2, UU1, UU2;
-    ECP_copy(&GG1, G1);
-    ECP_copy(&GG2, G2);
-    ECP_copy(&UU1, U1);
-    ECP_copy(&UU2, U2);
-
-    BIG c;
-    ECPchallengeEquals(G1, G2, U1, U2, A1, A2, c, extra);
-
-    PAIR_G1mul(&GG1, z);
-    PAIR_G1mul(&GG2, z);
-    PAIR_G1mul(&UU1, c);
-    PAIR_G1mul(&UU2, c);
-    ECP_add(&UU1, A1);
-    ECP_add(&UU2, A2);
-    return ECP_equals(&GG1, &UU1) && ECP_equals(&GG2, &UU2);
+    ECP AS, YC, BS, ZC;
+    ECP_copy(&AS, A);
+    ECP_copy(&YC, Y);
+    ECP_copy(&BS, B);
+    ECP_copy(&ZC, Z);
+    PAIR_G1mul(&AS, s);
+    PAIR_G1mul(&YC, c);
+    PAIR_G1mul(&BS, s);
+    PAIR_G1mul(&ZC, c);
+    ECP_add(&AS, &YC);
+    ECP_add(&BS, &ZC);
+    BIG cc;
+    ECPchallengeEquals(message, Y, Z, A, B, &AS, &BS, cc);
+    return BIG_comp(c, cc) == 0;
 }
 
 // make POK of X such that Y = G ** X
-// v is a random integer mod group order
-// output is T, r
-static void makeECP2Proof(ECP2* G, ECP2* Y, BIG x, BIG v, ECP2* T, BIG r)
+// output is c, s
+static void makeECP2Proof(csprng* RNG, ECP2* G, ECP2* Y, BIG x, BIG c, BIG s)
 {
-    BIG order;
+    BIG r, order;
+    randomModOrder(r, RNG);
+    ECP2 GR;
+    ECP2_copy(&GR, G);
+    PAIR_G2mul(&GR, r);
+    ECP2challenge(Y, G, &GR, c);
     BIG_rcopy(order, CURVE_Order);
-
-    ECP2_copy(T, G);
-    PAIR_G2mul(T, v); // T = G ** v
-
-    // c = H(G, Y, T)
-    ECP2challenge(G, Y, T, r);
-    BIG_modmul(r, r, x, order);
-    BIG_modneg(r, r, order);
-    BIG_add(r, r, v);
-    BIG_mod(r, order);
+    BIG_modmul(s, c, x, order);
+    BIG_modneg(s, s, order);
+    BIG_add(s, s, r);
+    BIG_mod(s, order);
 }
 
 
 // POK of X such that Y = G ** X
 // verify that T = (G ** R) * (Y ** C), C = H(G, Y, T)
-static int verifyECP2Proof(ECP2* G, ECP2* Y, ECP2* T, BIG r)
+static int verifyECP2Proof(ECP2* G, ECP2* Y, BIG c, BIG s)
 {
-    BIG c;
-    ECP2challenge(G, Y, T, c);
-    ECP2 GG, YY;
-    ECP2_copy(&GG, G);
-    ECP2_copy(&YY, Y);
-    PAIR_G2mul(&GG, r);
-    PAIR_G2mul(&YY, c);
-    ECP2_add(&GG, &YY);
-    return ECP2_equals(&GG, T);
+    ECP2 GS, YC;
+    ECP2_copy(&GS, G);
+    ECP2_copy(&YC, Y);
+    PAIR_G2mul(&GS, s);
+    PAIR_G2mul(&YC, c);
+    ECP2_add(&GS, &YC);
+    BIG cc;
+    ECP2challenge(Y, G, &GS, cc);
+    return BIG_comp(c, cc) == 0;
 }
 
 // Do we need e(X, a)· e(X, b) ** m == e(g1, c)? See 4.2
@@ -267,8 +272,8 @@ static int verifyAux(ECP* A, ECP* B, ECP* C, ECP* D, ECP2* X, ECP2 *Y)
     return 1;
 }
 
-// n given by server
-void join_client(csprng *RNG, octet* n, struct JoinMessage *j, struct UserPrivateKey *priv)
+// n is a challenge for the user, 32 bytes
+void join_client(csprng *RNG, char* n, struct JoinMessage *j, struct UserPrivateKey *priv)
     // BIG gsk, ECP* Q, ECP* T, BIG rr) // output
 {
     ECP G;
@@ -280,19 +285,17 @@ void join_client(csprng *RNG, octet* n, struct JoinMessage *j, struct UserPrivat
 
     ECP_copy(&priv->Q, &j->Q);
 
-    BIG v;
-    randomModOrder(v, RNG);
-    makeECPProof(&G, &j->Q, priv->gsk, v, &j->T, n, j->r);
+    makeECPProof(RNG, &G, &j->Q, priv->gsk, n, j->c, j->s);
 }
 
-int join_server(csprng *RNG, struct GroupPrivateKey *priv, struct JoinMessage *j, octet *n, struct JoinResponse *resp)
+int join_server(csprng *RNG, struct GroupPrivateKey *priv, struct JoinMessage *j, char *n, struct JoinResponse *resp)
 {
     BIG order;
     BIG_rcopy(order, CURVE_Order);
 
     ECP G;
     setG1(&G);
-    int ok = verifyECPProof(&G, &j->Q, &j->T, n, j->r);
+    int ok = verifyECPProof(&G, &j->Q, n, j->c, j->s);
     if (ok) {
         ECP *A = &resp->cred.A;
         ECP *B = &resp->cred.B;
@@ -317,7 +320,7 @@ int join_server(csprng *RNG, struct GroupPrivateKey *priv, struct JoinMessage *j
         ECP_add(C, D);
         PAIR_G1mul(C, priv->x);
 
-        makeECPProofEquals(RNG, &G, Q, B, D, tmp, &resp->A1, &resp->A2, resp->z, 0);
+        makeECPProofEquals(RNG, &G, Q, B, D, tmp, 0, resp->c, resp->s);
     }
     return ok;
 }
@@ -340,17 +343,8 @@ int setup(csprng *RNG, struct GroupPrivateKey *priv)
     PAIR_G2mul(&priv->pub.X, priv->x);
     PAIR_G2mul(&priv->pub.Y, priv->y);
 
-    // Make POK of discrete-logs for X and Y
-    // https://en.wikipedia.org/wiki/Fiat%E2%80%93Shamir_heuristic
-    // (https://crypto.stackexchange.com/questions/15758/how-can-we-prove-that-two-discrete-logarithms-are-equal)
-    // https://cs.nyu.edu/courses/spring07/G22.3220-001/lec3.pdf
-    // ECP2_copy(&T,&W);
-    BIG v;
-    randomModOrder(v, RNG);
-
-    // Is it ok to reuse v and T? Any vulnerability?
-    makeECP2Proof(&W, &priv->pub.X, priv->x, v, &priv->pub.T, priv->pub.rx);
-    makeECP2Proof(&W, &priv->pub.Y, priv->y, v, &priv->pub.T, priv->pub.ry); // We are doing extra computation here of T = W ** v
+    makeECP2Proof(RNG, &W, &priv->pub.X, priv->x, priv->pub.cx, priv->pub.sx);
+    makeECP2Proof(RNG, &W, &priv->pub.Y, priv->y, priv->pub.cy, priv->pub.sy);
 
     return 0;
 }
@@ -360,8 +354,8 @@ int verifyGroupPublicKey(struct GroupPublicKey *pub)
     ECP2 W;
     setG2(&W);
 
-    return verifyECP2Proof(&W, &pub->X, &pub->T, pub->rx)
-        && verifyECP2Proof(&W, &pub->Y, &pub->T, pub->ry);
+    return verifyECP2Proof(&W, &pub->X, pub->cx, pub->sx)
+        && verifyECP2Proof(&W, &pub->Y, pub->cy, pub->sy);
 }
 
 int join_finish_client(struct GroupPublicKey *pub, struct UserPrivateKey *priv, struct JoinResponse *resp)
@@ -369,7 +363,7 @@ int join_finish_client(struct GroupPublicKey *pub, struct UserPrivateKey *priv, 
     ECP G;
     setG1(&G);
 
-    if (!verifyECPProofEquals(&G, &priv->Q, &resp->cred.B, &resp->cred.D, &resp->A1, &resp->A2, resp->z, 0)) {
+    if (!verifyECPProofEquals(&G, &priv->Q, &resp->cred.B, &resp->cred.D, 0, resp->c, resp->s)) {
         return 0;
     }
 
@@ -414,9 +408,7 @@ void sign(csprng *RNG, struct UserPrivateKey *priv, char *msg, char *bsn, struct
     for (int i=0; i < 32; ++i) HASH256_process(&h_msg_bsn, msg[i]);
     for (int i=0; i < 32; ++i) HASH256_process(&h_msg_bsn, bsn[i]);
     HASH256_hash(&h_msg_bsn, hh_msg_bsn);
-    octet HH_MSG_BSN = {32, 32, msg};
-
-    makeECPProofEquals(RNG, &sig->B, &BSN, &sig->D, &sig->NYM, priv->gsk, &sig->A1, &sig->A2, sig->z, &HH_MSG_BSN);
+    makeECPProofEquals(RNG, &sig->B, &BSN, &sig->D, &sig->NYM, priv->gsk, hh_msg_bsn, sig->c, sig->s);
 }
 
 int verify(char *msg, char *bsn, struct Signature *sig, struct GroupPublicKey *pub)
@@ -432,9 +424,8 @@ int verify(char *msg, char *bsn, struct Signature *sig, struct GroupPublicKey *p
     for (int i=0; i < 32; ++i) HASH256_process(&h_msg_bsn, msg[i]);
     for (int i=0; i < 32; ++i) HASH256_process(&h_msg_bsn, bsn[i]);
     HASH256_hash(&h_msg_bsn, hh_msg_bsn);
-    octet HH_MSG_BSN = {32, 32, msg};
 
-    return verifyECPProofEquals(&sig->B, &BSN, &sig->D, &sig->NYM, &sig->A1, &sig->A2, sig->z, &HH_MSG_BSN)
+    return verifyECPProofEquals(&sig->B, &BSN, &sig->D, &sig->NYM, hh_msg_bsn, sig->c, sig->s)
      && !ECP_isinf(&sig->A) && !ECP_isinf(&sig->B)
      && verifyAux(&sig->A, &sig->B, &sig->C, &sig->D, &pub->X, &pub->Y);
 }

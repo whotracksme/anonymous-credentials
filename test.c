@@ -41,11 +41,10 @@ int main(void)
     struct JoinMessage j;
     struct UserPrivateKey userPriv;
     char message[32];
-    octet MESSAGE = {32, 32, message};
-    join_client(&RNG, &MESSAGE, &j, &userPriv);
+    join_client(&RNG, message, &j, &userPriv);
 
     struct JoinResponse resp;
-    res = join_server(&RNG, &priv, &j, &MESSAGE, &resp);
+    res = join_server(&RNG, &priv, &j, message, &resp);
     if (!res) {
         printf("Bad join message\n");
         return -1;
@@ -67,10 +66,9 @@ int main(void)
 
     clock_t start=clock();
     res = 1;
-    sign(&RNG, &userPriv, msg, bsn, &sig);
     int iterations = 500;
     for (i = 0; i <iterations; ++i) {
-        // res &= verify(&MSG, &BSN, &sig, &priv.pub);
+        // res &= verify(msg, bsn, &sig, &priv.pub);
         sign(&RNG, &userPriv, msg, bsn, &sig);
     }
 
@@ -86,8 +84,6 @@ int main(void)
     ECP_output(&sig.B);
     ECP_output(&sig.C);
     ECP_output(&sig.D);
-    ECP_output(&sig.A1);
-    ECP_output(&sig.A2);
 
     // sign: 6.5ms per signature (native), 9ms in Firefox and 10 ms in V8 (node v8.1.4)
     // verify: 19ms per signature (clang -O3 -march=native). Is the compiler optimizing it away?

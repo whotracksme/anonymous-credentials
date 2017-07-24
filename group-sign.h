@@ -7,12 +7,10 @@ struct GroupPublicKey {
     ECP2 Y; // G2 ** y
 
     // ZK of discrete-log knowledge for X and Y
-    // c = H(G2, Q, T)
-    // T == (G2 ** rx) * (X ** c)
-    // T == (G2 ** ry) * (Y ** c)
-    ECP2 T;
-    BIG rx;
-    BIG ry;
+    BIG cx;
+    BIG sx;
+    BIG cy;
+    BIG sy;
 };
 
 struct GroupPrivateKey {
@@ -24,10 +22,8 @@ struct GroupPrivateKey {
 struct JoinMessage {
     ECP Q; // G1 ** gsk
 
-    // c = H(G1, Q, T, message)
-    // T == (G1 ** r) * (Q ** c)
-    ECP T;
-    BIG r;
+    BIG c;
+    BIG s;
 };
 
 struct UserCredentials {
@@ -45,13 +41,8 @@ struct UserPrivateKey {
 
 struct JoinResponse {
     struct UserCredentials cred;
-    // Q = G1 ** gsk
-    // c = H(G1, Q, B, D, A1, A2)
-    // (G1 ** z) == A1 * (cred.B ** c)
-    // (Q ** z) == A2 * (cred.D ** c)
-    ECP A1;
-    ECP A2;
-    BIG z;
+    BIG c;
+    BIG s;
 };
 
 struct Signature {
@@ -61,20 +52,15 @@ struct Signature {
     ECP D;
     ECP NYM;
 
-    // Q = G1 ** gsk
-    // c = H(G1, Q, B, D, A1, A2)
-    // (G1 ** z) == A1 * (cred.B ** c)
-    // (Q ** z) == A2 * (cred.D ** c)
-    ECP A1;
-    ECP A2;
-    BIG z;
+    BIG c;
+    BIG s;
 };
 
 // n given by server
 // BIG gsk, ECP* Q, ECP* T, BIG rr) // output
-void join_client(csprng *RNG, octet* n, struct JoinMessage *j, struct UserPrivateKey *priv);
+void join_client(csprng *RNG, char* n, struct JoinMessage *j, struct UserPrivateKey *priv);
 
-int join_server(csprng *RNG, struct GroupPrivateKey *priv, struct JoinMessage *j, octet *n, struct JoinResponse *resp);
+int join_server(csprng *RNG, struct GroupPrivateKey *priv, struct JoinMessage *j, char *n, struct JoinResponse *resp);
 
 int setup(csprng *RNG, struct GroupPrivateKey *priv);
 
