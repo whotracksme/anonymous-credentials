@@ -1,13 +1,81 @@
 #include "group-sign.h"
 
-#if CURVETYPE==MONTGOMERY
-    #define ECPSIZE (MODBYTES+1)
-#else
-    #define ECPSIZE (2*MODBYTES+1)
-#endif
-
+#define ECPSIZE (2*MODBYTES)
 #define ECP2SIZE (4*MODBYTES)
+#define BIGSIZE MODBYTES
 
+static int serialize_BIG(BIG* in, octet* out)
+{
+  int len = out->len;
+  out->len += BIGSIZE;
+  if (out->len <= out->max) {
+    BIG_toBytes(&out->val[len], *in);
+    return 1;
+  }
+  return 0;
+}
+static int deserialize_BIG(octet* in, BIG* out)
+{
+  int len = in->len;
+  in->len += BIGSIZE;
+  if (in->len <= in->max) {
+    BIG_fromBytes(*out, &in->val[len]);
+    return 1;
+  }
+  return 0;
+}
+
+static int serialize_ECP2(ECP2* in, octet* out)
+{
+  int len = out->len;
+  out->len += ECP2SIZE;
+  if (out->len <= out->max) {
+    octet tmp = {0, out->max - len, &out->val[len]};
+    ECP2_toOctet(&tmp, in);
+    return 1;
+  }
+  return 0;
+}
+static int deserialize_ECP2(octet* in, ECP2* out)
+{
+  int len = in->len;
+  in->len += ECP2SIZE;
+  if (in->len <= in->max) {
+    octet tmp = {0, in->max - len, &in->val[len]};
+    return ECP2_fromOctet(out, &tmp) && 1;
+  }
+  return 0;
+}
+
+static int serialize_ECP(ECP* in, octet* out)
+{
+  int len = out->len;
+  out->len += ECPSIZE;
+  if (out->len <= out->max) {
+    // ECP_toOctet uses an extra byte to indicate MONTGOMERY/WEIERSTRASS form
+    // but we don't: just WEIERSTRASS
+    octet tmp = {0, out->max - len, &out->val[len]};
+    BIG x,y;
+    ECP_get(x,y,in);
+    BIG_toBytes(&tmp.val[0], x);
+    BIG_toBytes(&tmp.val[MODBYTES], y);
+    return 1;
+  }
+  return 0;
+}
+static int deserialize_ECP(octet* in, ECP* out)
+{
+  int len = in->len;
+  in->len += ECPSIZE;
+  if (in->len <= in->max) {
+    octet tmp = {0, in->max - len, &in->val[len]};
+    BIG x,y;
+    BIG_fromBytes(x,&(tmp.val[0]));
+    BIG_fromBytes(y,&(tmp.val[MODBYTES]));
+    return ECP_set(out,x,y) && 1;
+  }
+  return 0;
+}
 
 /* map octet string containing hash to point on curve of correct order */
 // from milagro-crypto-c (mpin.c)
@@ -65,8 +133,8 @@ static void addECP2Hash(hash256* h, ECP2* P)
 static void addECPHash(hash256* h, ECP* P)
 {
     char tmp[ECPSIZE];
-    octet TMP = {0, sizeof(tmp), tmp};
-    ECP_toOctet(&TMP, P);
+    octet TMP = {0, ECPSIZE, tmp};
+    serialize_ECP(P, &TMP);
     for (int i=0; i<ECPSIZE; i++) HASH256_process(h,TMP.val[i]);
 }
 
@@ -90,7 +158,7 @@ static void ECP2challenge(ECP2* Y, ECP2* G, ECP2* GR, BIG c)
 
 // perhaps could refector with templates
 // assuming message is 32 bytes long (or null pointer)
-static void ECPchallenge(char* message, ECP* Y, ECP* G, ECP* GR, BIG c)
+static void ECPchallenge(Byte32 message, ECP* Y, ECP* G, ECP* GR, BIG c)
 {
     hash256 sha256;
     HASH256_init(&sha256);
@@ -129,7 +197,7 @@ static void makeECPProof(csprng* RNG, ECP* G, ECP* Y, BIG x, char *message, BIG 
     BIG_mod(s, order);
 }
 
-static void ECPchallengeEquals(char* message, ECP* Y, ECP* Z, ECP* A, ECP* B, ECP* AR, ECP* BR, BIG c)
+static void ECPchallengeEquals(Byte32 message, ECP* Y, ECP* Z, ECP* A, ECP* B, ECP* AR, ECP* BR, BIG c)
 {
     hash256 sha256;
     HASH256_init(&sha256);
@@ -154,7 +222,7 @@ static void ECPchallengeEquals(char* message, ECP* Y, ECP* Z, ECP* A, ECP* B, EC
     BIG_norm(c); // Needed?
 }
 
-static void makeECPProofEquals(csprng* RNG, ECP* A, ECP* B, ECP* Y, ECP* Z, BIG x, char* message, BIG c, BIG s)
+static void makeECPProofEquals(csprng* RNG, ECP* A, ECP* B, ECP* Y, ECP* Z, BIG x, Byte32 message, BIG c, BIG s)
 {
     BIG r, order;
     randomModOrder(r, RNG);
@@ -173,7 +241,7 @@ static void makeECPProofEquals(csprng* RNG, ECP* A, ECP* B, ECP* Y, ECP* Z, BIG 
 
 // POK of X such that Y = G ** X
 // verify that T = (G ** R) * (Y ** C), C = H(G, Y, T)
-static int verifyECPProof(ECP* G, ECP* Y, char *message, BIG c, BIG s)
+static int verifyECPProof(ECP* G, ECP* Y, Byte32 message, BIG c, BIG s)
 {
     ECP GS, YC;
     ECP_copy(&GS, G);
@@ -186,7 +254,7 @@ static int verifyECPProof(ECP* G, ECP* Y, char *message, BIG c, BIG s)
     return BIG_comp(c, cc) == 0;
 }
 
-static int verifyECPProofEquals(ECP* A, ECP* B, ECP* Y, ECP* Z, char* message, BIG c, BIG s)
+static int verifyECPProofEquals(ECP* A, ECP* B, ECP* Y, ECP* Z, Byte32 message, BIG c, BIG s)
 {
     ECP AS, YC, BS, ZC;
     ECP_copy(&AS, A);
@@ -272,8 +340,148 @@ static int verifyAux(ECP* A, ECP* B, ECP* C, ECP* D, ECP2* X, ECP2 *Y)
     return 1;
 }
 
+int serialize_group_public_key(struct GroupPublicKey* in, octet* out)
+{
+  return
+  serialize_ECP2(&in->X, out) &&
+  serialize_ECP2(&in->Y, out) &&
+  serialize_BIG(&in->cx, out) &&
+  serialize_BIG(&in->sx, out) &&
+  serialize_BIG(&in->cy, out) &&
+  serialize_BIG(&in->sy, out);
+}
+
+int deserialize_group_public_key(octet* in, struct GroupPublicKey* out)
+{
+  return
+  deserialize_ECP2(in, &out->X) &&
+  deserialize_ECP2(in, &out->Y) &&
+  deserialize_BIG(in, &out->cx) &&
+  deserialize_BIG(in, &out->sx) &&
+  deserialize_BIG(in, &out->cy) &&
+  deserialize_BIG(in, &out->sy) &&
+  verifyGroupPublicKey(out); // TODO: should this be done here?
+}
+
+int serialize_group_private_key(struct GroupPrivateKey* in, octet* out)
+{
+  return serialize_group_public_key(&in->pub, out) &&
+  serialize_BIG(&in->x, out) &&
+  serialize_BIG(&in->y, out);
+}
+static int _checkPrivateKey(struct GroupPrivateKey* key)
+{
+  ECP2 X, Y;
+  setG2(&X);
+  setG2(&Y);
+  PAIR_G2mul(&X, key->x);
+  PAIR_G2mul(&Y, key->y);
+  return ECP2_equals(&X, &key->pub.X) && ECP2_equals(&Y, &key->pub.Y);
+}
+int deserialize_group_private_key(octet* in, struct GroupPrivateKey* out)
+{
+  return deserialize_group_public_key(in, &out->pub) &&
+  deserialize_BIG(in, &out->x) &&
+  deserialize_BIG(in, &out->y) &&
+  _checkPrivateKey(out); // TODO: should this be done here?
+}
+
+int serialize_join_message(struct JoinMessage* in, octet* out)
+{
+  return
+  serialize_ECP(&in->Q, out) &&
+  serialize_BIG(&in->c, out) &&
+  serialize_BIG(&in->s, out);
+}
+
+int deserialize_join_message(octet* in, struct JoinMessage* out)
+{
+  return
+  deserialize_ECP(in, &out->Q) &&
+  deserialize_BIG(in, &out->c) &&
+  deserialize_BIG(in, &out->s);
+}
+
+int serialize_user_credentials(struct UserCredentials* in, octet* out)
+{
+  return
+  serialize_ECP(&in->A, out) &&
+  serialize_ECP(&in->B, out) &&
+  serialize_ECP(&in->C, out) &&
+  serialize_ECP(&in->D, out);
+}
+
+int deserialize_user_credentials(octet* in, struct UserCredentials* out)
+{
+  return
+  deserialize_ECP(in, &out->A) &&
+  deserialize_ECP(in, &out->B) &&
+  deserialize_ECP(in, &out->C) &&
+  deserialize_ECP(in, &out->D);
+}
+
+int serialize_join_response(struct JoinResponse* in, octet* out)
+{
+  return
+  serialize_user_credentials(&in->cred, out) &&
+  serialize_BIG(&in->c, out) &&
+  serialize_BIG(&in->s, out);
+}
+
+int deserialize_join_response(octet* in, struct JoinResponse* out)
+{
+  return
+  deserialize_user_credentials(in, &out->cred) &&
+  deserialize_BIG(in, &out->c) &&
+  deserialize_BIG(in, &out->s);
+}
+
+int serialize_user_private_key(struct UserPrivateKey* in, octet* out)
+{
+  return
+  serialize_user_credentials(&in->cred, out) &&
+  serialize_BIG(&in->gsk, out);
+}
+
+int deserialize_user_private_key(octet* in, struct UserPrivateKey* out)
+{
+  return
+  deserialize_user_credentials(in, &out->cred) &&
+  deserialize_BIG(in, &out->gsk);
+}
+
+int serialize_signature(struct Signature* in, octet* out)
+{
+  return
+  serialize_ECP(&in->A, out) &&
+  serialize_ECP(&in->B, out) &&
+  serialize_ECP(&in->C, out) &&
+  serialize_ECP(&in->D, out) &&
+  serialize_ECP(&in->NYM, out) &&
+  serialize_BIG(&in->c, out) &&
+  serialize_BIG(&in->s, out);
+}
+
+int deserialize_signature(octet* in, struct Signature* out)
+{
+  return
+  deserialize_ECP(in, &out->A) &&
+  deserialize_ECP(in, &out->B) &&
+  deserialize_ECP(in, &out->C) &&
+  deserialize_ECP(in, &out->D) &&
+  deserialize_ECP(in, &out->NYM) &&
+  deserialize_BIG(in, &out->c) &&
+  deserialize_BIG(in, &out->s);
+}
+
+int serialize_signature_tag(struct Signature* in, octet* out)
+{
+  return
+  serialize_ECP(&in->NYM, out);
+}
+
 // n is a challenge for the user, 32 bytes
-void join_client(csprng *RNG, char* n, struct JoinMessage *j, struct UserPrivateKey *priv)
+void join_client(csprng *RNG, Byte32 n, struct JoinMessage *j, struct UserPrivateKey *priv)
     // BIG gsk, ECP* Q, ECP* T, BIG rr) // output
 {
     ECP G;
@@ -283,19 +491,19 @@ void join_client(csprng *RNG, char* n, struct JoinMessage *j, struct UserPrivate
     randomModOrder(priv->gsk, RNG);
     PAIR_G1mul(&j->Q, priv->gsk);
 
-    ECP_copy(&priv->Q, &j->Q);
+    // ECP_copy(&priv->Q, &j->Q);
 
     makeECPProof(RNG, &G, &j->Q, priv->gsk, n, j->c, j->s);
 }
 
-int join_server(csprng *RNG, struct GroupPrivateKey *priv, struct JoinMessage *j, char *n, struct JoinResponse *resp)
+int join_server(csprng *RNG, struct GroupPrivateKey *priv, struct JoinMessage *j, Byte32 challenge, struct JoinResponse *resp)
 {
     BIG order;
     BIG_rcopy(order, CURVE_Order);
 
     ECP G;
     setG1(&G);
-    int ok = verifyECPProof(&G, &j->Q, n, j->c, j->s);
+    int ok = verifyECPProof(&G, &j->Q, challenge, j->c, j->s);
     if (ok) {
         ECP *A = &resp->cred.A;
         ECP *B = &resp->cred.B;
@@ -327,8 +535,6 @@ int join_server(csprng *RNG, struct GroupPrivateKey *priv, struct JoinMessage *j
 
 int setup(csprng *RNG, struct GroupPrivateKey *priv)
 {
-    // We copy the CURVE_Order (prime) to bignum variable r
-
     ECP2 W;
     setG2(&W);
 
@@ -360,10 +566,13 @@ int verifyGroupPublicKey(struct GroupPublicKey *pub)
 
 int join_finish_client(struct GroupPublicKey *pub, struct UserPrivateKey *priv, struct JoinResponse *resp)
 {
-    ECP G;
+    ECP G, Q;
     setG1(&G);
 
-    if (!verifyECPProofEquals(&G, &priv->Q, &resp->cred.B, &resp->cred.D, 0, resp->c, resp->s)) {
+    ECP_copy(&Q, &G);
+    PAIR_G1mul(&Q, priv->gsk);
+
+    if (!verifyECPProofEquals(&G, &Q, &resp->cred.B, &resp->cred.D, 0, resp->c, resp->s)) {
         return 0;
     }
 
@@ -380,7 +589,7 @@ int join_finish_client(struct GroupPublicKey *pub, struct UserPrivateKey *priv, 
 }
 
 // msg and octet len should be 32 bytes!!! Assuming sha256 is performed on original input.
-void sign(csprng *RNG, struct UserPrivateKey *priv, char *msg, char *bsn, struct Signature *sig)
+void sign(csprng *RNG, struct UserPrivateKey *priv, Byte32 msg, Byte32 bsn, struct Signature *sig)
 {
     ECP_copy(&sig->A, &priv->cred.A);
     ECP_copy(&sig->B, &priv->cred.B);
@@ -402,7 +611,7 @@ void sign(csprng *RNG, struct UserPrivateKey *priv, char *msg, char *bsn, struct
     PAIR_G1mul(&sig->NYM, priv->gsk);
 
     // Compute sha256(msg || bsn) to be used in proof of equality
-    char hh_msg_bsn[32];
+    Byte32 hh_msg_bsn;
     hash256 h_msg_bsn;
     HASH256_init(&h_msg_bsn);
     for (int i=0; i < 32; ++i) HASH256_process(&h_msg_bsn, msg[i]);
