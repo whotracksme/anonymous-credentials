@@ -11,9 +11,10 @@ emcc -s WASM=1 -std=c99 -Wall -Wextra -Wno-strict-prototypes -Wunused-value -Wca
 
 # We need to make the loader believe that the environment is node. We will then provide the
 # necessary requires, also returning the wasm binary code from an inlined buffer
-sed -i '1s;^;module.exports=function(module, require, window, importScripts){\n;' group-sign-bindings.js
+sed -i '1s;^;module.exports=function(){\n;' group-sign-bindings.js
+echo "return Module;" >> group-sign-bindings.js
 echo "}" >> group-sign-bindings.js
 
 mkdir -p dist
-echo "self.GroupSignManager = require('./group-sign-manager');" | ./node_modules/.bin/browserify -t brfs . > dist/group-sign-worker-bundle.js
-cp group-sign-manager.js group-sign-bindings.wasm group-sign-bindings.js dist
+echo "global.GroupSignManager = require('./group-sign-manager');" | ./node_modules/.bin/browserify - > dist/group-sign-worker-bundle.js
+cp group-sign-bindings.wasm dist
