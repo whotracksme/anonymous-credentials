@@ -1,4 +1,4 @@
-const ModuleBuilder = require('./interface');
+const ModuleBuilder = require('./group-sign-bindings');
 
 class GroupSignManager {
   _arrayToPtr(data) {
@@ -14,7 +14,20 @@ class GroupSignManager {
     return new Promise((resolve, reject) => {
       try {
         const mymodule = { exports: null };
-        ModuleBuilder(mymodule);
+        ModuleBuilder(mymodule, (name) => {
+          if (name === 'path') {
+            return require('path');
+          }
+          if (name === 'fs') {
+            return {
+              readFileSync: (fn) => {
+                if (fn === 'group-sign-bindings.wasm') {
+                  return require('fs').readFileSync('group-sign-bindings.wasm');
+                }
+              }
+            }
+          }
+        });
         this.instance = mymodule.exports;
         this.instance.preRun = resolve;
       } catch (e) {

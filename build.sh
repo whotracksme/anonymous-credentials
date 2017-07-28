@@ -1,6 +1,0 @@
-emcc -s WASM=1  -DCMAKE -I/home/alex/group-sign/milagro-crypto-c/target/default/src -I/home/alex/group-sign/milagro-crypto-c/target/default/include  -std=c99 -Wall -Wextra -Wno-strict-prototypes -Wunused-value -Wcast-align -Wunused-variable -Wundef -Wformat-security -Wshadow -O2   -o  group-sign.c.o  -c group-sign.c
-
-
-emcc -s WASM=1  -DCMAKE -I/home/alex/group-sign/milagro-crypto-c/target/default/src -I/home/alex/group-sign/milagro-crypto-c/target/default/include  -std=c99 -Wall -Wextra -Wno-strict-prototypes -Wunused-value -Wcast-align -Wunused-variable -Wundef -Wformat-security -Wshadow -O2   -o  test.c.o  -c test.c
-
-emcc -s WASM=1   -std=c99 -Wall -Wextra -Wno-strict-prototypes -Wunused-value -Wcast-align -Wunused-variable -Wundef -Wformat-security -Wshadow -O2 group-sign.c.o test.c.o -o test.html  -L/home/alex/group-sign/milagro-crypto-c/target/default/src -Wl,-rpath,/home/alex/group-sign/milagro-crypto-c/target/default/src -rdynamic /home/alex/group-sign/milagro-crypto-c/target/default/src/libamcl_ecc.a /home/alex/group-sign/milagro-crypto-c/target/default/src/libamcl_curve.a /home/alex/group-sign/milagro-crypto-c/target/default/src/libamcl_core.a /home/alex/group-sign/milagro-crypto-c/target/default/src/libamcl_pairing.a 

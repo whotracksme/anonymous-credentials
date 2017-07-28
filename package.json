@@ -1,0 +1,23 @@
+{
+  "name": "group-sign",
+  "version": "1.0.0",
+  "description": "",
+  "main": "group-sign-manager.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cliqz/group-sign.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/cliqz/group-sign/issues"
+  },
+  "homepage": "https://github.com/cliqz/group-sign#readme",
+  "dependencies": {
+    "brfs": "^1.4.3",
+    "browserify": "^14.4.0"
+  }
+}
