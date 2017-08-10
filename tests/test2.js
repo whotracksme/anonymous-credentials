@@ -1,4 +1,4 @@
-const GroupSignManager = require('./group-sign-manager');
+const GroupSignManager = require('../group-signer');
 
 // Testing
 const issuer = new GroupSignManager();
@@ -43,4 +43,4 @@ Promise.all([
   console.log((Date.now() - now)/N);
   console.log(issuer.getGroupPrivKey().length);
   console.log(user.getUserPrivKey().length);
-});
+}).catch(e => console.error(e));

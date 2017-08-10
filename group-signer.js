@@ -11,7 +11,7 @@ class GroupSignManager {
     this.instance = null;
   }
   init() {
-    return new Promise((resolve, reject) => {
+    const p = new Promise((resolve, reject) => {
       try {
         const mymodule = { exports: null };
         this.instance = ModuleBuilder();
@@ -20,15 +20,24 @@ class GroupSignManager {
         reject(e);
       }
     });
+    return p.then(() => {
+      this.state = this.instance._GS_createState();
+    });
+  }
+  unload() {
+    if (this.state !== undefined) {
+      this.instance._GS_destroyState(this.state);
+      delete this.state;
+    }
   }
   seed(data) {
     const ptr = this._arrayToPtr(data);
-    const ret = this.instance._JS_seed(ptr, data.length);
+    const ret = this.instance._GS_seed(this.state, ptr, data.length);
     this.instance._free(ptr);
     return ret;
   }
   setupGroup() {
-    return this.instance._JS_setupGroup();
+    return this.instance._GS_setupGroup(this.state);
   }
   getGroupPubKey() {
     const instance = this.instance;
@@ -36,7 +45,7 @@ class GroupSignManager {
     const ptr = instance._malloc(bytes);
     instance.setValue(ptr, bytes - 4, 'i32');
     let ret;
-    if (instance._JS_exportGroupPubKey(ptr + 4, ptr) === 1) {
+    if (instance._GS_exportGroupPubKey(this.state, ptr + 4, ptr) === 1) {
       const size = instance.getValue(ptr, 'i32');
       ret = (new Uint8Array(instance.HEAPU8.buffer, ptr + 4, size)).slice();
     }
@@ -49,7 +58,7 @@ class GroupSignManager {
     const ptr = instance._malloc(bytes);
     instance.setValue(ptr, bytes - 4, 'i32');
     let ret;
-    if (instance._JS_exportGroupPrivKey(ptr + 4, ptr) === 1) {
+    if (instance._GS_exportGroupPrivKey(this.state, ptr + 4, ptr) === 1) {
       const size = instance.getValue(ptr, 'i32');
       ret = (new Uint8Array(instance.HEAPU8.buffer, ptr + 4, size)).slice();
     }
@@ -59,14 +68,14 @@ class GroupSignManager {
   setGroupPubKey(data) {
     const instance = this.instance;
     const ptr = this._arrayToPtr(data);
-    const ret = instance._JS_loadGroupPubKey(ptr, data.length);
+    const ret = instance._GS_loadGroupPubKey(this.state, ptr, data.length);
     this.instance._free(ptr);
     return ret;
   }
   setGroupPrivKey(data) {
     const instance = this.instance;
     const ptr = this._arrayToPtr(data);
-    const ret = instance._JS_loadGroupPrivKey(ptr, data.length);
+    const ret = instance._GS_loadGroupPrivKey(this.state, ptr, data.length);
     this.instance._free(ptr);
     return ret;
   }
@@ -79,7 +88,7 @@ class GroupSignManager {
     instance.setValue(ptr, bytes - 4, 'i32');
 
     let ret;
-    if (instance._JS_startJoin(challengePtr, ptr + 4, ptr) === 1) {
+    if (instance._GS_startJoin(this.state, challengePtr, ptr + 4, ptr) === 1) {
       const size = instance.getValue(ptr, 'i32');
       ret = (new Uint8Array(instance.HEAPU8.buffer, ptr + 4, size)).slice();
     }
@@ -98,7 +107,7 @@ class GroupSignManager {
     instance.setValue(ptr, bytes - 4, 'i32');
 
     let ret;
-    if (instance._JS_processJoin(joinMsgPtr, joinMsg.length, challengePtr, ptr + 4, ptr) === 1) {
+    if (instance._GS_processJoin(this.state, joinMsgPtr, joinMsg.length, challengePtr, ptr + 4, ptr) === 1) {
       const size = instance.getValue(ptr, 'i32');
       ret = (new Uint8Array(instance.HEAPU8.buffer, ptr + 4, size)).slice();
     }
@@ -111,7 +120,7 @@ class GroupSignManager {
   finishJoin(joinResponse) {
     const instance = this.instance;
     const joinResponsePtr = this._arrayToPtr(joinResponse);
-    const ret = instance._JS_finishJoin(joinResponsePtr, joinResponse.length);
+    const ret = instance._GS_finishJoin(this.state, joinResponsePtr, joinResponse.length);
     this.instance._free(joinResponsePtr);
     return ret;
   }
@@ -125,7 +134,7 @@ class GroupSignManager {
     instance.setValue(ptr, bytes - 4, 'i32');
 
     let ret;
-    if (instance._JS_sign(msgPtr, bsnPtr, ptr + 4, ptr) === 1) {
+    if (instance._GS_sign(this.state, msgPtr, bsnPtr, ptr + 4, ptr) === 1) {
       const size = instance.getValue(ptr, 'i32');
       ret = (new Uint8Array(instance.HEAPU8.buffer, ptr + 4, size)).slice();
     }
@@ -141,7 +150,7 @@ class GroupSignManager {
     const bsnPtr = this._arrayToPtr(bsn);
     const sigPtr = this._arrayToPtr(sig);
 
-    const ret = instance._JS_verify(msgPtr, bsnPtr, sigPtr, sig.length);
+    const ret = instance._GS_verify(this.state, msgPtr, bsnPtr, sigPtr, sig.length);
     instance._free(msgPtr);
     instance._free(bsnPtr);
     instance._free(sigPtr);
@@ -156,7 +165,7 @@ class GroupSignManager {
     instance.setValue(ptr, bytes - 4, 'i32');
 
     let ret;
-    if (instance._JS_getSignatureTag(sigPtr, sig.length, ptr + 4, ptr) === 1) {
+    if (instance._GS_getSignatureTag(sigPtr, sig.length, ptr + 4, ptr) === 1) {
       const size = instance.getValue(ptr, 'i32');
       ret = (new Uint8Array(instance.HEAPU8.buffer, ptr + 4, size)).slice();
     }
@@ -171,7 +180,7 @@ class GroupSignManager {
     const ptr = instance._malloc(bytes);
     instance.setValue(ptr, bytes - 4, 'i32');
     let ret;
-    if (instance._JS_exportUserPrivKey(ptr + 4, ptr) === 1) {
+    if (instance._GS_exportUserPrivKey(this.state, ptr + 4, ptr) === 1) {
       const size = instance.getValue(ptr, 'i32');
       ret = (new Uint8Array(instance.HEAPU8.buffer, ptr + 4, size)).slice();
     }
@@ -181,7 +190,7 @@ class GroupSignManager {
   setUserPrivKey(data) {
     const instance = this.instance;
     const ptr = this._arrayToPtr(data);
-    const ret = instance._JS_loadUserPrivKey(ptr, data.length);
+    const ret = instance._GS_loadUserPrivKey(this.state, ptr, data.length);
     this.instance._free(ptr);
     return ret;
   }
