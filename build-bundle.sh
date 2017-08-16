@@ -1,5 +1,8 @@
 #!/bin/sh
 
+set -x
+set -e
+
 npm install
 
 (cd milagro-crypto-c && CMAKE_C_FLAGS='"-s WASM=1"' CMAKE_TOOLCHAIN_FILE=~/emsdk/emscripten/incoming/cmake/Modules/Platform/Emscripten.cmake make)
