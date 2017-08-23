@@ -1,0 +1,35 @@
+#
+# docker build . -f Dockerfile.emscripten -t emscripten
+#
+# WARNING:
+# --------
+# Note that downloading the LLVM sources and building it
+# will take very long (1-2 hours).
+#
+# Memory can also become an issue. On a 16 GB machine, it
+# should not safe, but be careful if you are compiling on
+# an 8 GB machine when there are other processes running!
+#
+# Sources:
+# http://webassembly.org/getting-started/developers-guide/
+#
+FROM ubuntu:16.04
+
+RUN apt-get update && \
+    apt-get install -y \
+      build-essential \
+      cmake \
+      curl \
+      git-core \
+      python \
+    && \
+    rm -rf /var/lib/apt/lists/* && \
+    rm -f /var/cache/apt/*.bin
+
+RUN cd / && git clone https://github.com/juj/emsdk.git
+WORKDIR emsdk
+
+RUN ./emsdk install sdk-incoming-64bit binaryen-master-64bit
+RUN ./emsdk activate sdk-incoming-64bit binaryen-master-64bit
+
+ENV PATH "$PATH:/emsdk/emscripten/incoming"
