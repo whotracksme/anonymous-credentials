@@ -1,15 +1,16 @@
 const ModuleBuilder = require('./group-sign-bindings');
 
 class GroupSignManager {
-  _arrayToPtr(data) {
-    const Module = this.instance;
-    const ptr = Module._malloc(data.length * data.BYTES_PER_ELEMENT);
-    Module.writeArrayToMemory(data, ptr);
-    return ptr;
+  static get BUFFER_SIZE() {
+    return 10 * 1024;
   }
+
   constructor() {
+    this.state = null;
     this.instance = null;
+    this.buffers = [];
   }
+
   init() {
     const p = new Promise((resolve, reject) => {
       try {
@@ -22,177 +23,97 @@ class GroupSignManager {
     });
     return p.then(() => {
       this.state = this.instance._GS_createState();
+      this._makeBindings();
     });
   }
   unload() {
     if (this.state !== undefined) {
+      this.buffers.forEach(buf => this.instance._free(buf));
+      this.buffers = [];
       this.instance._GS_destroyState(this.state);
       delete this.state;
     }
   }
-  seed(data) {
-    const ptr = this._arrayToPtr(data);
-    const ret = this.instance._GS_seed(this.state, ptr, data.length);
-    this.instance._free(ptr);
-    return ret;
-  }
-  setupGroup() {
-    return this.instance._GS_setupGroup(this.state);
-  }
-  getGroupPubKey() {
-    const instance = this.instance;
-    const bytes = 10*1024;
-    const ptr = instance._malloc(bytes);
-    instance.setValue(ptr, bytes - 4, 'i32');
-    let ret;
-    if (instance._GS_exportGroupPubKey(this.state, ptr + 4, ptr) === 1) {
-      const size = instance.getValue(ptr, 'i32');
-      ret = (new Uint8Array(instance.HEAPU8.buffer, ptr + 4, size)).slice();
+
+  _getBuffer(n) {
+    if (n >= this.buffers.length) {
+      this.buffers.push(this.instance._malloc(GroupSignManager.BUFFER_SIZE));
     }
-    instance._free(ptr);
-    return ret;
+    return this.buffers[n];
   }
-  getGroupPrivKey() {
-    const instance = this.instance;
-    const bytes = 10*1024;
-    const ptr = instance._malloc(bytes);
-    instance.setValue(ptr, bytes - 4, 'i32');
-    let ret;
-    if (instance._GS_exportGroupPrivKey(this.state, ptr + 4, ptr) === 1) {
-      const size = instance.getValue(ptr, 'i32');
-      ret = (new Uint8Array(instance.HEAPU8.buffer, ptr + 4, size)).slice();
+
+  _arrayToPtr(data, ptr) {
+    if (data.length > GroupSignManager.BUFFER_SIZE) {
+      throw new Error('Data size exceeded');
     }
-    instance._free(ptr);
-    return ret;
-  }
-  setGroupPubKey(data) {
-    const instance = this.instance;
-    const ptr = this._arrayToPtr(data);
-    const ret = instance._GS_loadGroupPubKey(this.state, ptr, data.length);
-    this.instance._free(ptr);
-    return ret;
-  }
-  setGroupPrivKey(data) {
-    const instance = this.instance;
-    const ptr = this._arrayToPtr(data);
-    const ret = instance._GS_loadGroupPrivKey(this.state, ptr, data.length);
-    this.instance._free(ptr);
-    return ret;
-  }
-  startJoin(challenge) {
-    const instance = this.instance;
-    const challengePtr = this._arrayToPtr(challenge);
-
-    const bytes = 10*1024;
-    const ptr = instance._malloc(bytes);
-    instance.setValue(ptr, bytes - 4, 'i32');
-
-    let ret;
-    if (instance._GS_startJoin(this.state, challengePtr, ptr + 4, ptr) === 1) {
-      const size = instance.getValue(ptr, 'i32');
-      ret = (new Uint8Array(instance.HEAPU8.buffer, ptr + 4, size)).slice();
-    }
-
-    this.instance._free(challengePtr);
-    this.instance._free(ptr);
-    return ret;
-  }
-  processJoin(joinMsg, challenge) {
-    const instance = this.instance;
-    const challengePtr = this._arrayToPtr(challenge);
-    const joinMsgPtr = this._arrayToPtr(joinMsg);
-
-    const bytes = 10*1024;
-    const ptr = instance._malloc(bytes);
-    instance.setValue(ptr, bytes - 4, 'i32');
-
-    let ret;
-    if (instance._GS_processJoin(this.state, joinMsgPtr, joinMsg.length, challengePtr, ptr + 4, ptr) === 1) {
-      const size = instance.getValue(ptr, 'i32');
-      ret = (new Uint8Array(instance.HEAPU8.buffer, ptr + 4, size)).slice();
-    }
-
-    this.instance._free(challengePtr);
-    this.instance._free(joinMsgPtr);
-    this.instance._free(ptr);
-    return ret;
-  }
-  finishJoin(joinResponse) {
-    const instance = this.instance;
-    const joinResponsePtr = this._arrayToPtr(joinResponse);
-    const ret = instance._GS_finishJoin(this.state, joinResponsePtr, joinResponse.length);
-    this.instance._free(joinResponsePtr);
-    return ret;
-  }
-  sign(msg, bsn) {
-    const instance = this.instance;
-    const msgPtr = this._arrayToPtr(msg);
-    const bsnPtr = this._arrayToPtr(bsn);
-
-    const bytes = 10*1024;
-    const ptr = instance._malloc(bytes);
-    instance.setValue(ptr, bytes - 4, 'i32');
-
-    let ret;
-    if (instance._GS_sign(this.state, msgPtr, bsnPtr, ptr + 4, ptr) === 1) {
-      const size = instance.getValue(ptr, 'i32');
-      ret = (new Uint8Array(instance.HEAPU8.buffer, ptr + 4, size)).slice();
-    }
-
-    this.instance._free(msgPtr);
-    this.instance._free(bsnPtr);
-    this.instance._free(ptr);
-    return ret;
-  }
-  verify(msg, bsn, sig) {
-    const instance = this.instance;
-    const msgPtr = this._arrayToPtr(msg);
-    const bsnPtr = this._arrayToPtr(bsn);
-    const sigPtr = this._arrayToPtr(sig);
-
-    const ret = instance._GS_verify(this.state, msgPtr, bsnPtr, sigPtr, sig.length);
-    instance._free(msgPtr);
-    instance._free(bsnPtr);
-    instance._free(sigPtr);
-    return ret;
+    this.instance.writeArrayToMemory(data, ptr);
+    return ptr;
   }
 
-  getSignatureTag(sig) {
-    const instance = this.instance;
-    const sigPtr = this._arrayToPtr(sig);
-    const bytes = 10*1024;
-    const ptr = instance._malloc(bytes);
-    instance.setValue(ptr, bytes - 4, 'i32');
+  _makeBindings() {
+    const _ = (func, inputs = [], output = false, context = true) => {
+      return (...args) => {
+        if (args.length !== inputs.length) {
+          throw new Error('Args num mismatch');
+        }
+        if (!args.every(arg => arg instanceof Uint8Array)) {
+          throw new Error('Args must be Uint8Array');
+        }
 
-    let ret;
-    if (instance._GS_getSignatureTag(sigPtr, sig.length, ptr + 4, ptr) === 1) {
-      const size = instance.getValue(ptr, 'i32');
-      ret = (new Uint8Array(instance.HEAPU8.buffer, ptr + 4, size)).slice();
-    }
-    instance._free(sigPtr);
-    instance._free(ptr);
-    return ret;
-  }
+        const funcArgs = [];
+        if (context) {
+          funcArgs.push(this.state);
+        }
+        inputs.forEach((size, i) => {
+          if (size && args[i].length !== size) {
+            throw new Error('Args size mismatch');
+          }
 
-  getUserPrivKey() {
-    const instance = this.instance;
-    const bytes = 10*1024;
-    const ptr = instance._malloc(bytes);
-    instance.setValue(ptr, bytes - 4, 'i32');
-    let ret;
-    if (instance._GS_exportUserPrivKey(this.state, ptr + 4, ptr) === 1) {
-      const size = instance.getValue(ptr, 'i32');
-      ret = (new Uint8Array(instance.HEAPU8.buffer, ptr + 4, size)).slice();
-    }
-    instance._free(ptr);
-    return ret;
-  }
-  setUserPrivKey(data) {
-    const instance = this.instance;
-    const ptr = this._arrayToPtr(data);
-    const ret = instance._GS_loadUserPrivKey(this.state, ptr, data.length);
-    this.instance._free(ptr);
-    return ret;
+          const ptr = this._arrayToPtr(args[i], this._getBuffer(i));
+          funcArgs.push(ptr);
+          if (!size) {
+            funcArgs.push(args[i].length);
+          }
+        });
+        if (output === 'array') {
+          const ptr = this._getBuffer(inputs.length);
+          this.instance.setValue(ptr, GroupSignManager.BUFFER_SIZE - 4, 'i32');
+          funcArgs.push(ptr + 4);
+          funcArgs.push(ptr);
+        }
+
+        const res = this.instance[func](...funcArgs);
+        if (output === 'boolean') {
+          return res === 1;
+        } else if (output) {
+          const ptr = funcArgs[funcArgs.length - 1];
+          return (new Uint8Array(
+            this.instance.HEAPU8.buffer,
+            ptr + 4,
+            this.instance.getValue(ptr, 'i32')
+          )).slice();
+        }
+
+        if (res !== 1) {
+          throw new Error('Internal error');
+        }
+      }
+    };
+
+    this.seed = _('_GS_seed', [0]);
+    this.setupGroup = _('_GS_setupGroup');
+    this.getGroupPubKey = _('_GS_exportGroupPubKey', [], 'array');
+    this.getGroupPrivKey = _('_GS_exportGroupPrivKey', [], 'array');
+    this.getUserPrivKey = _('_GS_exportUserPrivKey', [], 'array');
+    this.setGroupPubKey = _('_GS_loadGroupPubKey', [0]);
+    this.setGroupPrivKey = _('_GS_loadGroupPrivKey', [0]);
+    this.setUserPrivKey = _('_GS_loadUserPrivKey', [0]);
+    this.startJoin = _('_GS_startJoin', [32], 'array');
+    this.processJoin = _('_GS_processJoin', [0, 32], 'array');
+    this.finishJoin = _('_GS_finishJoin', [0]);
+    this.sign = _('_GS_sign', [32, 32], 'array');
+    this.verify = _('_GS_verify', [32, 32, 0], 'boolean');
+    this.getSignatureTag = _('_GS_getSignatureTag', [0], 'array', false);
   }
 }
 
