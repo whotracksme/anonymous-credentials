@@ -1,0 +1,4 @@
+# options: Debug Release
+BUILD_TYPE=Release
+
+EMCC_FLAGS="-O2"

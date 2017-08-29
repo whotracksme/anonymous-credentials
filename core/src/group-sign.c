@@ -1,8 +1,55 @@
 #include "group-sign.h"
+#include <stdio.h>
 
 #define ECPSIZE (2*MODBYTES)
 #define ECP2SIZE (4*MODBYTES)
 #define BIGSIZE MODBYTES
+
+void message(const char* msg)
+{
+  printf("%s\n", msg);
+}
+
+void log_state(int state)
+{
+  const char* flag_GS_SEEDED = "";
+  if(state & (1 << GS_SEEDED))
+  {
+    flag_GS_SEEDED = "GS_SEEDED";
+  }
+
+  const char* flag_GS_GROUP_PRIVKEY = "";
+  if(state & (1 << GS_GROUP_PRIVKEY))
+  {
+    flag_GS_GROUP_PRIVKEY = "GS_GROUP_PRIVKEY";
+  }
+  
+  const char* flag_GS_GROUP_PUBKEY = "";
+  if(state & (1 << GS_GROUP_PUBKEY))
+  {
+    flag_GS_GROUP_PUBKEY = "GS_GROUP_PUBKEY";
+  }
+
+  const char* flag_GS_STARTJOIN = "";
+  if(state & (1 << GS_STARTJOIN))
+  {
+    flag_GS_STARTJOIN = "GS_STARTJOIN";
+  }
+
+  const char* flag_GS_USERCREDS = "";
+  if(state & (1 << GS_USERCREDS))
+  {
+    flag_GS_USERCREDS = "GS_USERCREDS";
+  }
+  
+  printf("state changed to %d (%s %s %s %s %s)\n",
+         state,
+         flag_GS_SEEDED,
+         flag_GS_GROUP_PRIVKEY,
+         flag_GS_GROUP_PUBKEY,
+         flag_GS_STARTJOIN,
+         flag_GS_USERCREDS);
+}
 
 static int serialize_BIG(BIG* in, octet* out)
 {
@@ -484,6 +531,7 @@ int serialize_signature_tag(struct Signature* in, octet* out)
 void join_client(csprng *RNG, Byte32 n, struct JoinMessage *j, struct UserPrivateKey *priv)
     // BIG gsk, ECP* Q, ECP* T, BIG rr) // output
 {
+  message("join_client");
     ECP G;
     setG1(&G);
 
@@ -494,6 +542,8 @@ void join_client(csprng *RNG, Byte32 n, struct JoinMessage *j, struct UserPrivat
     // ECP_copy(&priv->Q, &j->Q);
 
     makeECPProof(RNG, &G, &j->Q, priv->gsk, n, j->c, j->s);
+
+  message("join_client: done");
 }
 
 int join_server(csprng *RNG, struct GroupPrivateKey *priv, struct JoinMessage *j, Byte32 challenge, struct JoinResponse *resp)
@@ -648,6 +698,7 @@ int verify(char *msg, char *bsn, struct Signature *sig, struct GroupPublicKey *p
 void* GS_createState() {
   GS_State* state = malloc(sizeof(GS_State));
   state->state = 0;
+  log_state(state->state);
   return state;
 }
 
@@ -662,6 +713,7 @@ int GS_seed(void* rawstate, char* seed, int seed_length) {
   }
   RAND_seed(&state->_rng, seed_length, seed);
   state->state |= 1 << GS_SEEDED;
+  log_state(state->state);
   return GS_RETURN_SUCCESS;
 }
 
@@ -674,6 +726,7 @@ int GS_setupGroup(void* rawstate) {
   setup(&state->_rng, &state->_priv);
   state->state |= 1 << GS_GROUP_PRIVKEY;
   state->state |= 1 << GS_GROUP_PUBKEY;
+  log_state(state->state);
   return GS_RETURN_SUCCESS;
 }
 
@@ -686,6 +739,7 @@ int GS_loadGroupPrivKey(void* rawstate, char* data, int len) {
   }
   state->state |= 1 << GS_GROUP_PRIVKEY;
   state->state |= 1 << GS_GROUP_PUBKEY;
+  log_state(state->state);
   return GS_RETURN_SUCCESS;
 }
 
@@ -697,26 +751,35 @@ int GS_loadGroupPubKey(void* rawstate, char* data, int len) {
     return GS_INVALID_DATA;
   }
   state->state |= 1 << GS_GROUP_PUBKEY;
+  log_state(state->state);
   return GS_RETURN_SUCCESS;
 }
 
 int GS_startJoin(void* rawstate, Byte32 challenge, char* joinmsg, int* len) {
+  message("GS_startJoin called");
+
   GS_State* state = (GS_State*)rawstate;
   if (!((1 << GS_SEEDED)&state->state) || !((1 << GS_GROUP_PUBKEY)&state->state)) {
+    message("GS_startJoin: GS_RETURN_UNINITIALIZED");
     return GS_RETURN_UNINITIALIZED;
   }
 
   state->state &= ~(1 << GS_USERCREDS);
+  log_state(state->state);
 
   struct JoinMessage j;
   join_client(&state->_rng, challenge, &j, &state->_userPriv);
   octet o = {0, *len, joinmsg};
   if (!serialize_join_message(&j, &o)) {
+    message("GS_startJoin: GS_INVALID_DATA");
     return GS_INVALID_DATA;
   }
 
   *len = o.len;
   state->state |= (1 << GS_STARTJOIN);
+  log_state(state->state);
+
+  message("GS_startJoin: GS_RETURN_SUCCESS");
   return GS_RETURN_SUCCESS;
 }
 
@@ -726,6 +789,7 @@ int GS_finishJoin(void* rawstate, char* joinresponse, int len) {
     return GS_RETURN_UNINITIALIZED;
   }
   state->state &= ~(1 << GS_STARTJOIN);
+  log_state(state->state);
 
   octet o = {0, len, joinresponse};
   struct JoinResponse resp;
@@ -734,6 +798,7 @@ int GS_finishJoin(void* rawstate, char* joinresponse, int len) {
   }
 
   state->state |= (1 << GS_USERCREDS);
+  log_state(state->state);
 
   return GS_RETURN_SUCCESS;
 }
@@ -745,6 +810,7 @@ int GS_loadUserPrivKey(void* rawstate, char* in, int in_len) {
   GS_State* state = (GS_State*)rawstate;
   state->state &= ~(1 << GS_STARTJOIN);
   state->state &= ~(1 << GS_USERCREDS);
+  log_state(state->state);
 
   octet o = {0, in_len, in};
   if (!deserialize_user_private_key(&o, &state->_userPriv)) {
@@ -752,6 +818,7 @@ int GS_loadUserPrivKey(void* rawstate, char* in, int in_len) {
   }
 
   state->state |= (1 << GS_USERCREDS);
+  log_state(state->state);
   return GS_RETURN_SUCCESS;
 }
 // End - Operations that modify internal state
@@ -797,7 +864,12 @@ int GS_exportUserPrivKey(void* rawstate, char* out, int* out_len) {
 
 int GS_processJoin(void* rawstate, char* joinmsg, int joinmsg_len, Byte32 challenge, char* out, int* out_len) {
   GS_State* state = (GS_State*)rawstate;
-  if (!((1 << GS_GROUP_PRIVKEY)&state->state || !((1 << GS_SEEDED)&state->state))) {
+  if (!((1 << GS_GROUP_PRIVKEY)&state->state)) {
+    message("GS_GROUP_PRIVKEY not set");
+    return GS_RETURN_UNINITIALIZED;
+  }
+  if (!((1 << GS_SEEDED)&state->state)) {
+    message("GS_SEEDED not set");
     return GS_RETURN_UNINITIALIZED;
   }
 

@@ -6,6 +6,10 @@ add_definitions(-DCMAKE)
 enable_testing ()
 
 add_subdirectory(src)
-add_subdirectory(test)
+
+option (ENABLE_TESTS "Enable tests" ON)
+if (ENABLE_TESTS)
+  add_subdirectory(test)
+endif()
 
 add_subdirectory(../milagro-crypto-c milagro-crypto-c)

@@ -1,0 +1,7 @@
+FROM groupsign_group_sign:frozen
+
+VOLUME /host-system
+WORKDIR /host-system
+
+COPY docker-helpers/run-core-tests-in-docker.sh /
+ENTRYPOINT ["/run-core-tests-in-docker.sh"]
