@@ -12,3 +12,6 @@ target_link_libraries(hallo_world_test groupsign)
 
 add_executable (hallo_world_test_cpp hallo_world_test.cpp)
 target_link_libraries(hallo_world_test_cpp groupsign)
+
+add_executable (example example.c)
+target_link_libraries(example groupsign)
