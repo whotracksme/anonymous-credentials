@@ -1,0 +1,4 @@
+# options: Debug Release
+BUILD_TYPE=Debug
+
+EMCC_FLAGS="-g4"

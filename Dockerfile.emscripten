@@ -13,8 +13,14 @@
 # Sources:
 # http://webassembly.org/getting-started/developers-guide/
 #
-FROM ubuntu:16.04
+FROM ubuntu:17.04
 
+#
+# Attempts to reduce the size of the layer.
+# The final "strip" is a hack, but it reduces the size from
+# about 25G to about 2.5G. (Some of the Clang binaries are
+# almost 1G in size and shrink down to about 50M).
+#
 RUN apt-get update && \
     apt-get install -y \
       build-essential \
@@ -24,12 +30,12 @@ RUN apt-get update && \
       python \
     && \
     rm -rf /var/lib/apt/lists/* && \
-    rm -f /var/cache/apt/*.bin
+    rm -f /var/cache/apt/*.bin && \
+    cd / && git clone https://github.com/juj/emsdk.git && \
+    cd emsdk && \
+    ./emsdk install sdk-incoming-64bit binaryen-master-64bit && \
+    ./emsdk activate sdk-incoming-64bit binaryen-master-64bit && \
+    bash -c '(cd /emsdk && find | xargs strip) 2> /dev/null || true'
 
-RUN cd / && git clone https://github.com/juj/emsdk.git
 WORKDIR emsdk
-
-RUN ./emsdk install sdk-incoming-64bit binaryen-master-64bit
-RUN ./emsdk activate sdk-incoming-64bit binaryen-master-64bit
-
 ENV PATH "$PATH:/emsdk/emscripten/incoming"
