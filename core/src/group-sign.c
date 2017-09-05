@@ -151,14 +151,10 @@ static void setG1(ECP* X)
 static void setG2(ECP2* X)
 {
     FP2 wx,wy;
-    BIG_rcopy(wx.a,CURVE_Pxa);
-    FP_nres(wx.a);
-    BIG_rcopy(wx.b,CURVE_Pxb);
-    FP_nres(wx.b);
-    BIG_rcopy(wy.a,CURVE_Pya);
-    FP_nres(wy.a);
-    BIG_rcopy(wy.b,CURVE_Pyb);
-    FP_nres(wy.b);
+    FP_rcopy(&(wx.a),CURVE_Pxa);
+    FP_rcopy(&(wx.b),CURVE_Pxb);
+    FP_rcopy(&(wy.a),CURVE_Pya);
+    FP_rcopy(&(wy.b),CURVE_Pyb);
     ECP2_set(X,&wx,&wy);
 }
 

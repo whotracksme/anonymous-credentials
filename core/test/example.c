@@ -5,11 +5,8 @@
 #include "group-sign.h"
 #include "randapi.h"
 
-
 int main(void)
 {
-    // BIG_rcopy(order, CURVE_Order);
-
     int i;
     unsigned long ran;
     char raw[100];

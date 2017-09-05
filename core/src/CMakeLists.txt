@@ -7,4 +7,9 @@ set(SOURCES_GROUP_SIGN
 
 message(STATUS "Build libgroupsign")
 add_library(groupsign ${LIB_TYPE} ${SOURCES_GROUP_SIGN})
-target_link_libraries (groupsign amcl_core amcl_curve amcl_pairing)
+target_link_libraries (
+  groupsign
+  amcl_core
+  amcl_curve_BN254
+  amcl_pairing_BN254
+)
