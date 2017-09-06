@@ -20,6 +20,7 @@ extern "C" {
 #undef C99
 #endif
 
+// TODO: replacing macros by functions would improve tool support
 typedef FP_BN254   FP;
 #define FP_rcopy FP_BN254_rcopy
 #define FP_rcopy FP_BN254_rcopy
@@ -56,6 +57,7 @@ typedef ECP2_BN254 ECP2;
 #define ECP2_equals    ECP2_BN254_equals
 #define ECP2_fromOctet ECP2_BN254_fromOctet
 #define ECP2_toOctet   ECP2_BN254_toOctet
+#define ECP2_output    ECP2_BN254_output
 
 typedef BIG_256_56 BIG;
 #define BIG_get          BIG_256_56_get
@@ -72,6 +74,7 @@ typedef BIG_256_56 BIG;
 #define BIG_randomnum    BIG_256_56_randomnum
 #define BIG_norm         BIG_256_56_norm
 #define BIG_modmul       BIG_256_56_modmul
+#define BIG_output       BIG_256_56_output
 
 #define PAIR_G1mul       PAIR_BN254_G1mul
 #define PAIR_G2mul       PAIR_BN254_G2mul
