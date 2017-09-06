@@ -5,50 +5,57 @@
 #define ECP2SIZE (4*MODBYTES)
 #define BIGSIZE MODBYTES
 
+// debug option: logs all state transitions
+const int VERBOSE_LOGGING = 0;
+
 void message(const char* msg)
 {
-  printf("%s\n", msg);
+  if(VERBOSE_LOGGING)
+    printf("%s\n", msg);
 }
 
 void log_state(int state)
 {
-  const char* flag_GS_SEEDED = "";
-  if(state & (1 << GS_SEEDED))
+  if(VERBOSE_LOGGING)
   {
-    flag_GS_SEEDED = "GS_SEEDED";
-  }
+    const char* flag_GS_SEEDED = "";
+    if(state & (1 << GS_SEEDED))
+    {
+      flag_GS_SEEDED = "GS_SEEDED";
+    }
 
-  const char* flag_GS_GROUP_PRIVKEY = "";
-  if(state & (1 << GS_GROUP_PRIVKEY))
-  {
-    flag_GS_GROUP_PRIVKEY = "GS_GROUP_PRIVKEY";
-  }
-  
-  const char* flag_GS_GROUP_PUBKEY = "";
-  if(state & (1 << GS_GROUP_PUBKEY))
-  {
-    flag_GS_GROUP_PUBKEY = "GS_GROUP_PUBKEY";
-  }
+    const char* flag_GS_GROUP_PRIVKEY = "";
+    if(state & (1 << GS_GROUP_PRIVKEY))
+    {
+      flag_GS_GROUP_PRIVKEY = "GS_GROUP_PRIVKEY";
+    }
 
-  const char* flag_GS_STARTJOIN = "";
-  if(state & (1 << GS_STARTJOIN))
-  {
-    flag_GS_STARTJOIN = "GS_STARTJOIN";
-  }
+    const char* flag_GS_GROUP_PUBKEY = "";
+    if(state & (1 << GS_GROUP_PUBKEY))
+    {
+      flag_GS_GROUP_PUBKEY = "GS_GROUP_PUBKEY";
+    }
 
-  const char* flag_GS_USERCREDS = "";
-  if(state & (1 << GS_USERCREDS))
-  {
-    flag_GS_USERCREDS = "GS_USERCREDS";
+    const char* flag_GS_STARTJOIN = "";
+    if(state & (1 << GS_STARTJOIN))
+    {
+      flag_GS_STARTJOIN = "GS_STARTJOIN";
+    }
+
+    const char* flag_GS_USERCREDS = "";
+    if(state & (1 << GS_USERCREDS))
+    {
+      flag_GS_USERCREDS = "GS_USERCREDS";
+    }
+
+    printf("state changed to %d (%s %s %s %s %s)\n",
+           state,
+           flag_GS_SEEDED,
+           flag_GS_GROUP_PRIVKEY,
+           flag_GS_GROUP_PUBKEY,
+           flag_GS_STARTJOIN,
+           flag_GS_USERCREDS);
   }
-  
-  printf("state changed to %d (%s %s %s %s %s)\n",
-         state,
-         flag_GS_SEEDED,
-         flag_GS_GROUP_PRIVKEY,
-         flag_GS_GROUP_PUBKEY,
-         flag_GS_STARTJOIN,
-         flag_GS_USERCREDS);
 }
 
 // Enforce that input is normalized before computing the pairing.
