@@ -45,6 +45,7 @@ typedef ECP_BN254 ECP;
 #define ECP_setx   ECP_BN254_setx
 #define ECP_add    ECP_BN254_add
 #define ECP_mul    ECP_BN254_mul
+#define ECP_affine ECP_BN254_affine
 #define ECP_copy   ECP_BN254_copy
 #define ECP_isinf  ECP_BN254_isinf
 #define ECP_output ECP_BN254_output
@@ -53,6 +54,7 @@ typedef ECP2_BN254 ECP2;
 #define ECP2_get       ECP2_BN254_get
 #define ECP2_set       ECP2_BN254_set
 #define ECP2_add       ECP2_BN254_add
+#define ECP2_affine    ECP2_BN254_affine
 #define ECP2_copy      ECP2_BN254_copy
 #define ECP2_equals    ECP2_BN254_equals
 #define ECP2_fromOctet ECP2_BN254_fromOctet
