@@ -5,7 +5,7 @@ readonly cxx=${CXX:-clang++}
 readonly cc=${CC:-clang}
 readonly from_scratch=${FROM_SCRATCH:-false}
 
-docker build -f Dockerfile.test -t group-sign-test-image .
+docker build -f Dockerfile.coretests -t group-sign-test-image .
 docker run -v $(pwd):/host-system \
            -e CXX="$cxx" \
            -e CC="$cc" \

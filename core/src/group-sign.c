@@ -5,50 +5,67 @@
 #define ECP2SIZE (4*MODBYTES)
 #define BIGSIZE MODBYTES
 
+// debug option: logs all state transitions
+const int VERBOSE_LOGGING = 0;
+
 void message(const char* msg)
 {
-  printf("%s\n", msg);
+  if(VERBOSE_LOGGING)
+    printf("%s\n", msg);
 }
 
 void log_state(int state)
 {
-  const char* flag_GS_SEEDED = "";
-  if(state & (1 << GS_SEEDED))
+  if(VERBOSE_LOGGING)
   {
-    flag_GS_SEEDED = "GS_SEEDED";
-  }
+    const char* flag_GS_SEEDED = "";
+    if(state & (1 << GS_SEEDED))
+    {
+      flag_GS_SEEDED = "GS_SEEDED";
+    }
 
-  const char* flag_GS_GROUP_PRIVKEY = "";
-  if(state & (1 << GS_GROUP_PRIVKEY))
-  {
-    flag_GS_GROUP_PRIVKEY = "GS_GROUP_PRIVKEY";
-  }
-  
-  const char* flag_GS_GROUP_PUBKEY = "";
-  if(state & (1 << GS_GROUP_PUBKEY))
-  {
-    flag_GS_GROUP_PUBKEY = "GS_GROUP_PUBKEY";
-  }
+    const char* flag_GS_GROUP_PRIVKEY = "";
+    if(state & (1 << GS_GROUP_PRIVKEY))
+    {
+      flag_GS_GROUP_PRIVKEY = "GS_GROUP_PRIVKEY";
+    }
 
-  const char* flag_GS_STARTJOIN = "";
-  if(state & (1 << GS_STARTJOIN))
-  {
-    flag_GS_STARTJOIN = "GS_STARTJOIN";
-  }
+    const char* flag_GS_GROUP_PUBKEY = "";
+    if(state & (1 << GS_GROUP_PUBKEY))
+    {
+      flag_GS_GROUP_PUBKEY = "GS_GROUP_PUBKEY";
+    }
 
-  const char* flag_GS_USERCREDS = "";
-  if(state & (1 << GS_USERCREDS))
-  {
-    flag_GS_USERCREDS = "GS_USERCREDS";
+    const char* flag_GS_STARTJOIN = "";
+    if(state & (1 << GS_STARTJOIN))
+    {
+      flag_GS_STARTJOIN = "GS_STARTJOIN";
+    }
+
+    const char* flag_GS_USERCREDS = "";
+    if(state & (1 << GS_USERCREDS))
+    {
+      flag_GS_USERCREDS = "GS_USERCREDS";
+    }
+
+    printf("state changed to %d (%s %s %s %s %s)\n",
+           state,
+           flag_GS_SEEDED,
+           flag_GS_GROUP_PRIVKEY,
+           flag_GS_GROUP_PUBKEY,
+           flag_GS_STARTJOIN,
+           flag_GS_USERCREDS);
   }
-  
-  printf("state changed to %d (%s %s %s %s %s)\n",
-         state,
-         flag_GS_SEEDED,
-         flag_GS_GROUP_PRIVKEY,
-         flag_GS_GROUP_PUBKEY,
-         flag_GS_STARTJOIN,
-         flag_GS_USERCREDS);
+}
+
+// Enforce that input is normalized before computing the pairing.
+// (behaves as PAIR_ate in Milagro 3.5.0)
+static void PAIR_normalized_ate(FP12_BN254 *r, ECP2_BN254 *P, ECP_BN254 *Q)
+{
+  ECP2_affine(P);
+  ECP_affine(Q);
+
+  PAIR_ate(r, P, Q);
 }
 
 static int serialize_BIG(BIG* in, octet* out)
@@ -151,14 +168,10 @@ static void setG1(ECP* X)
 static void setG2(ECP2* X)
 {
     FP2 wx,wy;
-    BIG_rcopy(wx.a,CURVE_Pxa);
-    FP_nres(wx.a);
-    BIG_rcopy(wx.b,CURVE_Pxb);
-    FP_nres(wx.b);
-    BIG_rcopy(wy.a,CURVE_Pya);
-    FP_nres(wy.a);
-    BIG_rcopy(wy.b,CURVE_Pyb);
-    FP_nres(wy.b);
+    FP_rcopy(&(wx.a),CURVE_Pxa);
+    FP_rcopy(&(wx.b),CURVE_Pxb);
+    FP_rcopy(&(wy.a),CURVE_Pya);
+    FP_rcopy(&(wy.b),CURVE_Pyb);
     ECP2_set(X,&wx,&wy);
 }
 
@@ -366,9 +379,9 @@ static int verifyAux(ECP* A, ECP* B, ECP* C, ECP* D, ECP2* X, ECP2 *Y)
 
     // e(a, Y) == e(b, g2) and e(c, g2) == e(a · d, X)?
     // Can this be optimized?
-    PAIR_ate(&w, Y, A);
+    PAIR_normalized_ate(&w, Y, A);
     PAIR_fexp(&w);
-    PAIR_ate(&y, &G2, B);
+    PAIR_normalized_ate(&y, &G2, B);
     PAIR_fexp(&y);
     if (!FP12_equals(&w, &y)) {
         return 0;
@@ -377,9 +390,9 @@ static int verifyAux(ECP* A, ECP* B, ECP* C, ECP* D, ECP2* X, ECP2 *Y)
     ECP AA;
     ECP_copy(&AA, A);
     ECP_add(&AA, D);
-    PAIR_ate(&w, X, &AA);
+    PAIR_normalized_ate(&w, X, &AA);
     PAIR_fexp(&w);
-    PAIR_ate(&y, &G2, C);
+    PAIR_normalized_ate(&y, &G2, C);
     PAIR_fexp(&y);
     if (!FP12_equals(&w, &y)) {
         return 0;

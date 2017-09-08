@@ -3,6 +3,10 @@ project (groupsign)
 
 add_definitions(-DCMAKE)
 
+# always generate position-independent code
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+
 enable_testing ()
 
 add_subdirectory(src)

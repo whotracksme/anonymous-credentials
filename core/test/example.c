@@ -5,18 +5,16 @@
 #include "group-sign.h"
 #include "randapi.h"
 
-
 int main(void)
 {
-    // BIG_rcopy(order, CURVE_Order);
-
     int i;
     unsigned long ran;
     char raw[100];
     octet RAW= {0,sizeof(raw),raw};
     csprng RNG;                /* Crypto Strong RNG */
 
-    time((time_t *)&ran);
+    //time((time_t *)&ran);
+    ran=0;
 
     RAW.len=100;				/* FIXME: fake random seed source */
     RAW.val[0]=ran;
@@ -30,6 +28,15 @@ int main(void)
     // Setup server parameters (public key)
     struct GroupPrivateKey priv;
     setup(&RNG, &priv);
+    printf("----------------------------------------------------------------------\n");
+    ECP2_output(&priv.pub.X);printf("\n");
+    ECP2_output(&priv.pub.Y);printf("\n");
+    BIG_output(priv.pub.cx);printf("\n");
+    BIG_output(priv.pub.cy);printf("\n");
+    BIG_output(priv.pub.sy);printf("\n");
+    BIG_output(priv.x);printf("\n");
+    BIG_output(priv.y);printf("\n");
+    printf("----------------------------------------------------------------------\n");
 
     // Verify server public key (client should do it)
     int res = verifyGroupPublicKey(&priv.pub);
@@ -40,7 +47,7 @@ int main(void)
 
     struct JoinMessage j;
     struct UserPrivateKey userPriv;
-    char message[32];
+    const char* message = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
     join_client(&RNG, message, &j, &userPriv);
 
     struct JoinResponse resp;

@@ -1,4 +1,14 @@
-# options: Debug Release
 BUILD_TYPE=Release
 
-EMCC_FLAGS="-O2"
+CC=clang
+CXX=clang++
+
+DEFAULT_FLAGS="-O3 -DNDEBUG -fPIC"
+
+# Native compiler:
+CFLAGS="$DEFAULT_FLAGS"
+CXXFLAGS="$DEFAULT_FLAGS"
+
+# Emscripten specific:
+EMCC_FLAGS="$DEFAULT_FLAGS"
+EMCC_ASSERTIONS="0"

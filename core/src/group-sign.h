@@ -11,9 +11,77 @@ extern "C" {
 
 #include "amcl.h"
 
+#include "ecp_BN254.h"
+#include "ecp2_BN254.h"
+#include "big_256_56.h"
+#include "pair_BN254.h"
+
 #ifdef __cplusplus
 #undef C99
 #endif
+
+// TODO: replacing macros by functions would improve tool support
+typedef FP_BN254   FP;
+#define FP_rcopy FP_BN254_rcopy
+#define FP_rcopy FP_BN254_rcopy
+typedef FP2_BN254  FP2;
+typedef FP12_BN254 FP12;
+#define FP12_equals FP12_BN254_equals
+
+#define Modulus     Modulus_BN254
+#define MODBYTES    MODBYTES_256_56
+#define CURVE_Cof   CURVE_Cof_BN254
+#define CURVE_Gx    CURVE_Gx_BN254
+#define CURVE_Gy    CURVE_Gy_BN254
+#define CURVE_Pxa   CURVE_Pxa_BN254
+#define CURVE_Pxb   CURVE_Pxb_BN254
+#define CURVE_Pya   CURVE_Pya_BN254
+#define CURVE_Pyb   CURVE_Pyb_BN254
+#define CURVE_Order CURVE_Order_BN254
+
+typedef ECP_BN254 ECP;
+#define ECP_get    ECP_BN254_get
+#define ECP_set    ECP_BN254_set
+#define ECP_setx   ECP_BN254_setx
+#define ECP_add    ECP_BN254_add
+#define ECP_mul    ECP_BN254_mul
+#define ECP_affine ECP_BN254_affine
+#define ECP_copy   ECP_BN254_copy
+#define ECP_isinf  ECP_BN254_isinf
+#define ECP_output ECP_BN254_output
+
+typedef ECP2_BN254 ECP2;
+#define ECP2_get       ECP2_BN254_get
+#define ECP2_set       ECP2_BN254_set
+#define ECP2_add       ECP2_BN254_add
+#define ECP2_affine    ECP2_BN254_affine
+#define ECP2_copy      ECP2_BN254_copy
+#define ECP2_equals    ECP2_BN254_equals
+#define ECP2_fromOctet ECP2_BN254_fromOctet
+#define ECP2_toOctet   ECP2_BN254_toOctet
+#define ECP2_output    ECP2_BN254_output
+
+typedef BIG_256_56 BIG;
+#define BIG_get          BIG_256_56_get
+#define BIG_inc          BIG_256_56_inc
+#define BIG_add          BIG_256_56_add
+#define BIG_comp         BIG_256_56_comp
+#define BIG_mod          BIG_256_56_mod
+#define BIG_modneg       BIG_256_56_modneg
+#define BIG_fromBytes    BIG_256_56_fromBytes
+#define BIG_toBytes      BIG_256_56_toBytes
+#define BIG_fromBytesLen BIG_256_56_fromBytesLen
+#define BIG_copy         BIG_256_56_copy
+#define BIG_rcopy        BIG_256_56_rcopy
+#define BIG_randomnum    BIG_256_56_randomnum
+#define BIG_norm         BIG_256_56_norm
+#define BIG_modmul       BIG_256_56_modmul
+#define BIG_output       BIG_256_56_output
+
+#define PAIR_G1mul       PAIR_BN254_G1mul
+#define PAIR_G2mul       PAIR_BN254_G2mul
+#define PAIR_fexp        PAIR_BN254_fexp
+#define PAIR_ate         PAIR_BN254_ate
 
 typedef char Byte32[32];
 
