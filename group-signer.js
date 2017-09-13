@@ -80,11 +80,35 @@ class GroupSignManager {
           this.instance.setValue(ptr, GroupSignManager.BUFFER_SIZE - 4, 'i32');
           funcArgs.push(ptr + 4);
           funcArgs.push(ptr);
+        } else if (output === 'joinstatic') {
+          const ptr = this._getBuffer(inputs.length);
+          this.instance.setValue(ptr, GroupSignManager.BUFFER_SIZE - 4, 'i32');
+          funcArgs.push(ptr + 4);
+          funcArgs.push(ptr);
+
+          const ptr2 = this._getBuffer(inputs.length + 1);
+          this.instance.setValue(ptr2, GroupSignManager.BUFFER_SIZE - 4, 'i32');
+          funcArgs.push(ptr2 + 4);
+          funcArgs.push(ptr2);
         }
 
         const res = this.instance[func](...funcArgs);
         if (output === 'boolean') {
           return res === 1;
+        } else if (output === 'joinstatic') {
+          const ptrjoinmsg = funcArgs[funcArgs.length - 1];
+          const ptrgsk = funcArgs[funcArgs.length - 3];
+          const gsk = (new Uint8Array(
+            this.instance.HEAPU8.buffer,
+            ptrgsk + 4,
+            this.instance.getValue(ptrgsk, 'i32')
+          )).slice();
+          const joinmsg = (new Uint8Array(
+            this.instance.HEAPU8.buffer,
+            ptrjoinmsg + 4,
+            this.instance.getValue(ptrjoinmsg, 'i32')
+          )).slice();
+          return { gsk, joinmsg };
         } else if (output) {
           const ptr = funcArgs[funcArgs.length - 1];
           return (new Uint8Array(
@@ -114,6 +138,8 @@ class GroupSignManager {
     this.sign = _('_GS_sign', [32, 32], 'array');
     this.verify = _('_GS_verify', [32, 32, 0], 'boolean');
     this.getSignatureTag = _('_GS_getSignatureTag', [0], 'array', false);
+    this.startJoinStatic = _('_GS_startJoinStatic', [32], 'joinstatic');
+    this.finishJoinStatic = _('_GS_finishJoinStatic', [0, 0, 0], 'array', false);
   }
 }
 

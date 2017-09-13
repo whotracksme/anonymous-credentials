@@ -220,6 +220,22 @@ extern int GS_startJoin(void* state, Byte32 challenge, char* joinmsg, int* len);
 
 extern int GS_finishJoin(void* state, char* joinresponse, int len);
 
+// These are variants of startJoin and finishJoin that do not modify internal state
+// (except from RNG)
+extern int GS_startJoinStatic(
+  void* state,
+  Byte32 challenge, // in
+  char* gsk, int* len_gsk, // out
+  char* joinmsg, int* len // out
+);
+
+extern int GS_finishJoinStatic(
+  char* publickey, int len_publickey, // in
+  char* gsk, int len_gsk, // in
+  char* joinresponse, int len, // in
+  char* credentials, int* len_credentials // out
+);
+
 // Assuming it has already been verified in finishJoin
 // TODO: what if the group public key changes? should we include group public key in
 // UserPrivateKey? Now we don't require group public key to be set...

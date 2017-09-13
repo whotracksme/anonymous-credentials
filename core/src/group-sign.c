@@ -796,6 +796,41 @@ int GS_startJoin(void* rawstate, Byte32 challenge, char* joinmsg, int* len) {
   return GS_RETURN_SUCCESS;
 }
 
+int GS_startJoinStatic(
+  void* rawstate,
+  Byte32 challenge, // in
+  char* gsk, int* len_gsk, // out
+  char* joinmsg, int* len // out
+) {
+  message("GS_startJoinStatic called");
+
+  GS_State* state = (GS_State*)rawstate;
+  if (!((1 << GS_SEEDED)&state->state)) {
+    message("GS_startJoinStatic: GS_RETURN_UNINITIALIZED");
+    return GS_RETURN_UNINITIALIZED;
+  }
+
+  struct JoinMessage j;
+  struct UserPrivateKey userPriv;
+  join_client(&state->_rng, challenge, &j, &userPriv);
+  octet o = {0, *len, joinmsg};
+  if (!serialize_join_message(&j, &o)) {
+    message("GS_startJoinStatic: GS_INVALID_DATA");
+    return GS_INVALID_DATA;
+  }
+  *len = o.len;
+
+  octet o2 = {0, *len_gsk, gsk};
+  if (!serialize_BIG(&userPriv.gsk, &o2)) {
+    message("GS_startJoinStatic: GS_INVALID_DATA");
+    return GS_INVALID_DATA;
+  }
+  *len_gsk = o2.len;
+
+  message("GS_startJoinStatic: GS_RETURN_SUCCESS");
+  return GS_RETURN_SUCCESS;
+}
+
 int GS_finishJoin(void* rawstate, char* joinresponse, int len) {
   GS_State* state = (GS_State*)rawstate;
   if (!((1 << GS_STARTJOIN)&state->state)) {
@@ -812,6 +847,39 @@ int GS_finishJoin(void* rawstate, char* joinresponse, int len) {
 
   state->state |= (1 << GS_USERCREDS);
   log_state(state->state);
+
+  return GS_RETURN_SUCCESS;
+}
+
+int GS_finishJoinStatic(
+  char* publickey, int len_publickey, // in
+  char* gsk, int len_gsk, // in
+  char* joinresponse, int len, // in
+  char* credentials, int* len_credentials // out
+) {
+  struct GroupPublicKey pub;
+  octet op = {0, len_publickey, publickey};
+  if (!deserialize_group_public_key(&op, &pub)) {
+    return GS_INVALID_DATA;
+  }
+
+  octet og = {0, len_gsk, gsk};
+  struct UserPrivateKey priv;
+  if (!deserialize_BIG(&og, &priv.gsk)) {
+    return GS_INVALID_DATA;
+  }
+
+  octet o = {0, len, joinresponse};
+  struct JoinResponse resp;
+  if (!deserialize_join_response(&o, &resp) || !join_finish_client(&pub, &priv, &resp)) {
+    return GS_INVALID_DATA;
+  }
+
+  octet oc = {0, *len_credentials, credentials};
+  if (!serialize_user_private_key(&priv, &oc)) {
+    return GS_INVALID_DATA;
+  }
+  *len_credentials = oc.len;
 
   return GS_RETURN_SUCCESS;
 }
