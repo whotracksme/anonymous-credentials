@@ -1,0 +1,78 @@
+{
+  "variables": {
+    "Name": "groupsign",
+    "prefix": "hpnv2-",
+    "Owner": "philipp@cliqz.com",
+    "Project": "hpnv2",
+
+    "tag_commit": "",
+    "tag_branch": "",
+
+    "tmp_local_upload_dir": "tmp-upload-dir"
+  },
+  "builders": [{
+    "type": "amazon-ebs",
+    "access_key": "{{user `aws_access_key`}}",
+    "secret_key": "{{user `aws_secret_key`}}",
+    "iam_instance_profile": "packer-ecr",
+    "region": "{{user `region`}}",
+    "vpc_id": "{{user `vpc_id`}}",
+    "subnet_id": "{{user `subnet_id`}}",
+    "source_ami_filter": {
+      "filters": {
+        "virtualization-type": "hvm",
+        "name": "*ubuntu-zesty-17.04-amd64-server-*",
+        "root-device-type": "ebs"
+      },
+      "owners": ["099720109477"],
+      "most_recent": true
+    },
+    "ami_name": "{{user `prefix`|clean_ami_name}}{{user `Name`|clean_ami_name}}-{{isotime \"20060102150405\"}}",
+
+    "tags": {
+      "Name": "{{user `prefix`}}{{user `Name`}}-{{isotime \"20060102150405\"}}",
+      "Project": "{{user `tag_Project`}}",
+      "Owner": "{{user `tag_Owner`}}"
+    },
+
+    "instance_type": "m3.medium",
+    "ssh_username": "ubuntu",
+    "spot_price": "auto",
+    "spot_price_auto_product": "Linux/UNIX"
+  }],
+
+  "provisioners": [
+    {
+      "type": "file",
+      "source": "../authorized_keys",
+      "destination": "/tmp/authorized_keys"
+    },
+
+    {
+      "type": "shell-local",
+      "command": "./prepare-deploy-local.sh"
+    },
+    {
+      "type": "file",
+      "source": "./tmp-upload-dir",
+      "destination": "/tmp/"
+    },
+    {
+      "type": "shell-local",
+      "command": "rm -rf ./tmp_upload_dir"
+    },
+
+    {
+      "type": "file",
+      "source": "packer_init_commands.sh",
+      "destination": "/tmp/packer_init_commands.sh"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "sudo chmod a+x /tmp/packer_init_commands.sh",
+        "sudo /tmp/packer_init_commands.sh"
+      ]
+    }
+  ]
+}

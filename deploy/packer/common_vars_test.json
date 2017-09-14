@@ -1,0 +1,5 @@
+{
+  "region": "eu-central-1",
+  "vpc_id" : "vpc-aacd0ac3",
+  "subnet_id" : "subnet-05c52d7e"
+}
