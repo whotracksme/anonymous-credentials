@@ -13,6 +13,11 @@ variable "tag_Project" {
   default = "hpnv2"
 }
 
+# ELB settings:
+variable "elb_ssl_certificate_id" {
+  description = "The certificate used for the ELB (must match the domain used in the Route53 configuration)"
+}
+
 # EC2 settings:
 variable "instance_type" {
   default = "t2.nano",
