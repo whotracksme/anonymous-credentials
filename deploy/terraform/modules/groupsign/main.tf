@@ -115,6 +115,14 @@ resource "aws_elb" "groupsign_service" {
     instance_protocol = "http"
   }
 
+  listener {
+    lb_port            = 443
+    lb_protocol        = "https"
+    instance_port      = "${var.server_port}"
+    instance_protocol  = "http"
+    ssl_certificate_id = "${var.elb_ssl_certificate_id}"
+  }
+
   health_check {
     healthy_threshold   = 2
     unhealthy_threshold = 2
@@ -135,6 +143,16 @@ resource "aws_security_group_rule" "allow_http_inbound" {
 
   from_port   = 80
   to_port     = 80
+  protocol    = "tcp"
+  cidr_blocks = ["0.0.0.0/0"]
+}
+
+resource "aws_security_group_rule" "allow_https_inbound" {
+  type              = "ingress"
+  security_group_id = "${aws_security_group.elb.id}"
+
+  from_port   = 443
+  to_port     = 443
   protocol    = "tcp"
   cidr_blocks = ["0.0.0.0/0"]
 }
