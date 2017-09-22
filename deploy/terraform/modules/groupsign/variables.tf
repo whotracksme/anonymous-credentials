@@ -5,22 +5,22 @@ variable "cluster_prefix" {
 # Tags applied on all resources (Cliqz convention)
 variable "tag_Owner" {
   description = "Used to tag AWS resouces. By convention, use <yourname>@cliqz.com"
-  default = "philipp@cliqz.com"
+  default     = "philipp@cliqz.com"
 }
 
 variable "tag_Project" {
   description = "Used to tag AWS resouces."
-  default = "hpnv2"
+  default     = "hpnv2"
 }
 
 # ELB and Route53 settings:
 variable "dns_name" {
-  default = "groupsign.test.cliqz.com"
+  default     = "groupsign.test.cliqz.com"
   description = "The Route53 zone id, which must the domain that we used for the DNS name."
 }
 
 variable "use_cluster_prefix_dns_entry" {
-  default = 1
+  default     = 1
   description = "If this flag is set, the cluster prefix is applied on the dns record to avoid name clashes. On production, where you want to have nice URLs, you should disable it."
 }
 
@@ -34,18 +34,23 @@ variable "elb_ssl_certificate_id" {
 
 # EC2 settings:
 variable "instance_type" {
-  default = "t2.nano",
+  default     = "t2.nano"
   description = "The EC2 instance type used for the server"
 }
 
 variable "min_size" {
-  default = 1
+  default     = 1
   description = "The minimum size of the auto scaling group"
 }
 
 variable "max_size" {
-  default = 1
+  default     = 1
   description = "The maximum size of the auto scaling group"
+}
+
+variable "detailed_monitoring" {
+  default = 0
+  description = "Detailed monitoring makes sense in production, but basic monitoring, which is free of charge, should be sufficient for non-production deployments."
 }
 
 # VPC settings:
@@ -62,6 +67,6 @@ variable "ami" {
 }
 
 variable "server_port" {
-  default = 3000
+  default     = 3000
   description = "The port of the groupsign server"
 }
