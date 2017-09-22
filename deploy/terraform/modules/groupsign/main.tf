@@ -3,6 +3,7 @@ terraform {
 }
 
 resource "aws_launch_configuration" "groupsign_service" {
+  name            = "${var.cluster_prefix}-groupsign-launch-configuration"
   image_id        = "${var.ami}"
   instance_type   = "${var.instance_type}"
   security_groups = ["${aws_security_group.instance.id}"]
@@ -37,10 +38,9 @@ resource "aws_autoscaling_group" "groupsign_service" {
   min_size = "${var.min_size}"
   max_size = "${var.max_size}"
 
-  # TODO: used "tags" instead of multiple "tag" blocks
   tag {
     key                 = "Name"
-    value               = "${var.cluster_name}"
+    value               = "${var.cluster_prefix}"
     propagate_at_launch = true
   }
 
@@ -58,7 +58,7 @@ resource "aws_autoscaling_group" "groupsign_service" {
 }
 
 resource "aws_security_group" "instance" {
-  name = "${var.cluster_name}-groupsign-service-instance"
+  name = "${var.cluster_prefix}-groupsign-service-instance"
   vpc_id = "${var.vpc_id}"
 
   lifecycle {
@@ -97,7 +97,7 @@ resource "aws_security_group_rule" "allow_groupsign_all_outbound" {
 }
 
 resource "aws_elb" "groupsign_service" {
-  name               = "${var.cluster_name}-groupsign"
+  name               = "${var.cluster_prefix}-groupsign"
 # availability_zones = ["${data.aws_availability_zones.all.names}"]
   security_groups    = ["${aws_security_group.elb.id}"]
 
@@ -133,7 +133,7 @@ resource "aws_elb" "groupsign_service" {
 }
 
 resource "aws_security_group" "elb" {
-  name = "${var.cluster_name}-elb"
+  name = "${var.cluster_prefix}-elb"
   vpc_id = "${var.vpc_id}"
 }
 
@@ -168,10 +168,9 @@ resource "aws_security_group_rule" "allow_all_outbound" {
 }
 
 resource "aws_route53_record" "groupsign_service" {
-  name    = "${var.cluster_name}-groupsign.test.cliqz.com"
+  name    = "${var.use_cluster_prefix_dns_entry ? "${var.cluster_prefix}-${var.dns_name}" : var.dns_name}"
   type    = "A"
-  # TODO: assumes that we are using the test account
-  zone_id = "ZASDE0L6R1NKM"
+  zone_id = "${var.dns_zone_id}"
 
   alias {
     name = "${aws_elb.groupsign_service.dns_name}"

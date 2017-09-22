@@ -1,4 +1,4 @@
-variable "cluster_name" {
+variable "cluster_prefix" {
   description = "The name to use for all the cluster resources. It is used as a prefix to avoid name clashes while deploying different clusters in same AWS region. Example: hpnv2-dev, hpnv2-stage, hpnv2-prod"
 }
 
@@ -13,7 +13,21 @@ variable "tag_Project" {
   default = "hpnv2"
 }
 
-# ELB settings:
+# ELB and Route53 settings:
+variable "dns_name" {
+  default = "groupsign.test.cliqz.com"
+  description = "The Route53 zone id, which must the domain that we used for the DNS name."
+}
+
+variable "use_cluster_prefix_dns_entry" {
+  default = 1
+  description = "If this flag is set, the cluster prefix is applied on the dns record to avoid name clashes. On production, where you want to have nice URLs, you should disable it."
+}
+
+variable "dns_zone_id" {
+  description = "The Route53 zone id, which must the domain that we used for the DNS name."
+}
+
 variable "elb_ssl_certificate_id" {
   description = "The certificate used for the ELB (must match the domain used in the Route53 configuration)"
 }
