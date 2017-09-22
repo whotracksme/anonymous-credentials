@@ -1,0 +1,25 @@
+[Unit]
+Description=groupsign NodeJs server
+After=network.target
+Documentation=https://github.com/cliqz/group-sign
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/server
+EnvironmentFile=/etc/groupsign
+ExecStart=/usr/bin/node --napi-modules /opt/server/index.js
+TimeoutStopSec=0
+Restart=always
+
+# Security
+DynamicUser=true
+PrivateTmp=yes
+NoNewPrivileges=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ReadOnlyDirectories=/
+ReadWriteDirectories=/opt/server
+CapabilityBoundingSet=~CAP_SYS_PTRACE
+
+[Install]
+WantedBy=multi-user.target

@@ -30,7 +30,9 @@ apt-get install -y nodejs
 
 ( cd /opt/ && tar xzfv /tmp/tmp-upload-dir/server.tgz )
 ( cd /opt/server && tar xzf /tmp/tmp-upload-dir/server-deps.tgz )
-chown -R ubuntu:ubuntu /opt/server
+
+# setup systemd services (but let cloud-init enable them)
+cp /tmp/groupsign.service /etc/systemd/system
 
 # install SSH keys
 cat /tmp/authorized_keys > /home/ubuntu/.ssh/authorized_keys

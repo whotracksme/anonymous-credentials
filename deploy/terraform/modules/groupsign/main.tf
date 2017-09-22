@@ -3,7 +3,7 @@ terraform {
 }
 
 resource "aws_launch_configuration" "groupsign_service" {
-  name            = "${var.cluster_prefix}-groupsign-launch-configuration"
+  name_prefix     = "${var.cluster_prefix}-groupsign-launch-configuration"
   image_id        = "${var.ami}"
   instance_type   = "${var.instance_type}"
   security_groups = ["${aws_security_group.instance.id}"]

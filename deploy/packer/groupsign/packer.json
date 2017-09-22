@@ -47,6 +47,11 @@
       "source": "../authorized_keys",
       "destination": "/tmp/authorized_keys"
     },
+    {
+      "type": "file",
+      "source": "./groupsign.service",
+      "destination": "/tmp/groupsign.service"
+    },
 
     {
       "type": "shell-local",
