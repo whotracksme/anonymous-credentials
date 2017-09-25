@@ -49,17 +49,17 @@ variable "max_size" {
 }
 
 variable "detailed_monitoring" {
-  default = 0
+  default     = 0
   description = "Detailed monitoring makes sense in production, but basic monitoring, which is free of charge, should be sufficient for non-production deployments."
 }
 
 # VPC settings:
-variable "subnet_id" {
-  description = "The subnet in which the EC2 instances will be started"
-}
-
 variable "vpc_id" {
   description = "The VPC in which the EC2 instances will be started"
+}
+
+variable "subnet_id" {
+  description = "The subnet in which the EC2 instances will be started"
 }
 
 variable "ami" {

@@ -62,8 +62,8 @@ resource "aws_autoscaling_group" "groupsign_service" {
 }
 
 resource "aws_security_group" "instance" {
-  name   = "${var.cluster_prefix}-groupsign-service-instance"
-  vpc_id = "${var.vpc_id}"
+  name_prefix = "${var.cluster_prefix}-groupsign-service-instance"
+  vpc_id      = "${var.vpc_id}"
 
   lifecycle {
     create_before_destroy = true
@@ -150,8 +150,8 @@ resource "aws_elb" "groupsign_service" {
 }
 
 resource "aws_security_group" "elb" {
-  name   = "${var.cluster_prefix}-elb"
-  vpc_id = "${var.vpc_id}"
+  name_prefix = "${var.cluster_prefix}-elb"
+  vpc_id      = "${var.vpc_id}"
 
   tags {
     Name    = "${var.cluster_prefix}"
