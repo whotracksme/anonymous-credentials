@@ -70,6 +70,11 @@
       "source": "./groupsign.service",
       "destination": "/tmp/groupsign.service"
     },
+    {
+      "type": "file",
+      "source": "./groupsign-exporter.service",
+      "destination": "/tmp/groupsign-exporter.service"
+    },
 
     {
       "type": "shell-local",

@@ -22,8 +22,14 @@ apt-get install -y nodejs
 ( cd /opt/server && tar xzf /tmp/tmp-upload-dir/server-deps.tgz )
 
 # setup systemd services (but let cloud-init enable them)
-cp /tmp/groupsign.service /etc/systemd/system
-mkdir /var/run/groupsign
+cp /tmp/groupsign.service          /etc/systemd/system
+cp /tmp/groupsign-exporter.service /etc/systemd/system
+
+# create user for groupsign
+# ("--gecos" suppresses interactive dialogs)
+adduser --disabled-password --gecos "" groupsign
+mkdir /mutable
+chown groupsign /mutable
 
 # install SSH keys
 cat /tmp/authorized_keys > /home/ubuntu/.ssh/authorized_keys

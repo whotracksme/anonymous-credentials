@@ -1,15 +1,18 @@
 [Unit]
-Description=groupsign NodeJs server
+Description=Exports data written by the groupsign NodeJs server to S3
 After=network.target
 Documentation=https://github.com/cliqz/group-sign
 
 [Service]
-Type=simple
-WorkingDirectory=/opt/server
+Type=oneshot
+RemainAfterExit=true
 EnvironmentFile=/etc/groupsign
-ExecStart=/usr/bin/node --napi-modules /opt/server/index.js
-TimeoutStopSec=0
-Restart=always
+ExecStart=/bin/true
+
+# TODO: Upload to S3 (via some script)
+# TODO: Grant the machine the permission to write access S3
+# TODO: In addition to a shutdown hook, we should use a timer to upload periodically
+ExecStop=/bin/echo "STUB: Upload to S3 not implemented"
 
 # Security
 User=groupsign
@@ -26,8 +29,8 @@ CapabilityBoundingSet=
 AmbientCapabilities=
 SystemCallFilter=~@clock @module @mount @obsolete @raw-io ptrace
 
-# Grant write permission to output directories
-ReadWritePaths=-/mutable
+# Grant read permission to output directories
+ReadOnlyPaths=-/mutable
 
 [Install]
 WantedBy=multi-user.target
