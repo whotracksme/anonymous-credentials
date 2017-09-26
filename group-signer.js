@@ -17,6 +17,8 @@ class GroupSignManager {
         const mymodule = { exports: null };
         this.instance = ModuleBuilder();
         this.instance.preRun = resolve;
+        this.instance.onAbort = reject;
+        setTimeout(reject, 30 * 1000); // Reject initialization after 30 seconds
       } catch (e) {
         reject(e);
       }
