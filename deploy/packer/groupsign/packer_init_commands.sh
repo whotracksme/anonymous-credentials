@@ -23,6 +23,7 @@ apt-get install -y nodejs
 
 # setup systemd services (but let cloud-init enable them)
 cp /tmp/groupsign.service /etc/systemd/system
+mkdir /var/run/groupsign
 
 # install SSH keys
 cat /tmp/authorized_keys > /home/ubuntu/.ssh/authorized_keys
