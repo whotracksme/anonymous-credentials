@@ -3,10 +3,12 @@ terraform {
 }
 
 resource "aws_launch_configuration" "groupsign_service" {
-  image_id        = "${var.ami}"
-  instance_type   = "${var.instance_type}"
-  security_groups = ["${aws_security_group.instance.id}"]
-  user_data       = "${data.template_file.user_data.rendered}"
+  name_prefix       = "${var.cluster_prefix}-groupsign-launch-configuration"
+  image_id          = "${var.ami}"
+  instance_type     = "${var.instance_type}"
+  security_groups   = ["${aws_security_group.instance.id}"]
+  user_data         = "${data.template_file.user_data.rendered}"
+  enable_monitoring = "${var.detailed_monitoring}"
 
   lifecycle {
     create_before_destroy = true
@@ -18,29 +20,38 @@ data "template_file" "user_data" {
 
   vars {
     server_port = "${var.server_port}"
-    #db_address  = "${data.terraform_remote_state.db.address}"
-    #db_port     = "${data.terraform_remote_state.db.port}"
+    redis_address = "${var.redis_address}"
+    redis_port    = "${var.redis_port}"
   }
 }
 
 resource "aws_autoscaling_group" "groupsign_service" {
   launch_configuration = "${aws_launch_configuration.groupsign_service.id}"
+
+  # Forces the recreation after each change of the AMI,
+  # will will ensure that services are restarted.
+  name_prefix = "${aws_launch_configuration.groupsign_service.name}"
+
   #availability_zones   = ["${data.aws_availability_zones.all.names}"]
   vpc_zone_identifier = [
     "subnet-ec529b85", # public-eu-central-1a
     "subnet-07c52d7c", # public-eu-central-1b
     "subnet-122e0e58", # public-eu-central-1c
   ]
-  load_balancers       = ["${aws_elb.groupsign_service.name}"]
-  health_check_type    = "ELB"
+
+  load_balancers    = ["${aws_elb.groupsign_service.name}"]
+  health_check_type = "ELB"
 
   min_size = "${var.min_size}"
   max_size = "${var.max_size}"
 
-  # TODO: used "tags" instead of multiple "tag" blocks
+  lifecycle {
+    create_before_destroy = true
+  }
+
   tag {
     key                 = "Name"
-    value               = "${var.cluster_name}"
+    value               = "${var.cluster_prefix}"
     propagate_at_launch = true
   }
 
@@ -58,11 +69,17 @@ resource "aws_autoscaling_group" "groupsign_service" {
 }
 
 resource "aws_security_group" "instance" {
-  name = "${var.cluster_name}-groupsign-service-instance"
-  vpc_id = "${var.vpc_id}"
+  name_prefix = "${var.cluster_prefix}-groupsign-service-instance"
+  vpc_id      = "${var.vpc_id}"
 
   lifecycle {
     create_before_destroy = true
+  }
+
+  tags {
+    Name    = "${var.cluster_prefix}"
+    Owner   = "${var.tag_Owner}"
+    Project = "${var.tag_Project}"
   }
 }
 
@@ -97,9 +114,10 @@ resource "aws_security_group_rule" "allow_groupsign_all_outbound" {
 }
 
 resource "aws_elb" "groupsign_service" {
-  name               = "${var.cluster_name}-groupsign"
-# availability_zones = ["${data.aws_availability_zones.all.names}"]
-  security_groups    = ["${aws_security_group.elb.id}"]
+  name = "${var.cluster_prefix}-groupsign"
+
+  # availability_zones = ["${data.aws_availability_zones.all.names}"]
+  security_groups = ["${aws_security_group.elb.id}"]
 
   # TODO: add variable for public subnets:
   subnets = [
@@ -130,11 +148,23 @@ resource "aws_elb" "groupsign_service" {
     interval            = 30
     target              = "HTTP:${var.server_port}/config"
   }
+
+  tags {
+    Name    = "${var.cluster_prefix}"
+    Owner   = "${var.tag_Owner}"
+    Project = "${var.tag_Project}"
+  }
 }
 
 resource "aws_security_group" "elb" {
-  name = "${var.cluster_name}-elb"
-  vpc_id = "${var.vpc_id}"
+  name_prefix = "${var.cluster_prefix}-elb"
+  vpc_id      = "${var.vpc_id}"
+
+  tags {
+    Name    = "${var.cluster_prefix}"
+    Owner   = "${var.tag_Owner}"
+    Project = "${var.tag_Project}"
+  }
 }
 
 resource "aws_security_group_rule" "allow_http_inbound" {
@@ -168,26 +198,15 @@ resource "aws_security_group_rule" "allow_all_outbound" {
 }
 
 resource "aws_route53_record" "groupsign_service" {
-  name    = "${var.cluster_name}-groupsign.test.cliqz.com"
+  name    = "${var.use_cluster_prefix_dns_entry ? "${var.cluster_prefix}-${var.dns_name}" : var.dns_name}"
   type    = "A"
-  # TODO: assumes that we are using the test account
-  zone_id = "ZASDE0L6R1NKM"
+  zone_id = "${var.dns_zone_id}"
 
   alias {
-    name = "${aws_elb.groupsign_service.dns_name}"
-    zone_id = "${aws_elb.groupsign_service.zone_id}"
+    name                   = "${aws_elb.groupsign_service.dns_name}"
+    zone_id                = "${aws_elb.groupsign_service.zone_id}"
     evaluate_target_health = false
   }
 }
 
 data "aws_availability_zones" "all" {}
-
-#data "terraform_remote_state" "db" {
-#  backend = "s3"
-#
-#  config {
-#    bucket = "${var.db_remote_state_bucket}"
-#    key    = "${var.db_remote_state_key}"
-#    region = "us-east-1"
-#  }
-#}
