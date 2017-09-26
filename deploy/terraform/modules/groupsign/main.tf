@@ -20,9 +20,8 @@ data "template_file" "user_data" {
 
   vars {
     server_port = "${var.server_port}"
-
-    #db_address  = "${data.terraform_remote_state.db.address}"
-    #db_port     = "${data.terraform_remote_state.db.port}"
+    redis_address = "${var.redis_address}"
+    redis_port    = "${var.redis_port}"
   }
 }
 
@@ -41,6 +40,10 @@ resource "aws_autoscaling_group" "groupsign_service" {
 
   min_size = "${var.min_size}"
   max_size = "${var.max_size}"
+
+  lifecycle {
+    create_before_destroy = true
+  }
 
   tag {
     key                 = "Name"
@@ -203,14 +206,3 @@ resource "aws_route53_record" "groupsign_service" {
 }
 
 data "aws_availability_zones" "all" {}
-
-#data "terraform_remote_state" "db" {
-#  backend = "s3"
-#
-#  config {
-#    bucket = "${var.db_remote_state_bucket}"
-#    key    = "${var.db_remote_state_key}"
-#    region = "us-east-1"
-#  }
-#}
-

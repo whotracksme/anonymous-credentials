@@ -31,8 +31,10 @@
 
     "tags": {
       "Name": "{{user `prefix`}}{{user `Name`}}-{{isotime \"20060102150405\"}}",
-      "Project": "{{user `tag_Project`}}",
-      "Owner": "{{user `tag_Owner`}}"
+      "Project": "{{user `Project`}}",
+      "Owner": "{{user `Owner`}}",
+      "tag_commit": "{{user `tag_commit`}}",
+      "tag_branch": "{{user `tag_branch`}}"
     },
 
     "instance_type": "m3.medium",

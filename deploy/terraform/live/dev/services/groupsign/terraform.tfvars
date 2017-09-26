@@ -18,19 +18,3 @@ terragrunt = {
     }
   }
 }
-
-# TODO: do we need this?
-aws_region = "eu-central-1"
-account_id = "494430270403"
-profile = "cliqz-test"
-vpc_id = "vpc-aacd0ac3"
-private_subnets = [
-  "subnet-ef529b86", # private-eu-central-1a
-  "subnet-05c52d7e", # private-eu-central-1b
-  "subnet-290c2c63", # private-eu-central-1c
-]
-public_subnets = [
-  "subnet-ec529b85", # public-eu-central-1a
-  "subnet-07c52d7c", # public-eu-central-1b
-  "subnet-122e0e58", # public-eu-central-1c
-]

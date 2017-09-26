@@ -70,3 +70,13 @@ variable "server_port" {
   default     = 3000
   description = "The port of the groupsign server"
 }
+
+# Redis settings:
+
+variable "redis_address" {
+  description = "The address of the groupsign Redis instance"
+}
+
+variable "redis_port" {
+  description = "The port of the groupsign Redis instance"
+}
