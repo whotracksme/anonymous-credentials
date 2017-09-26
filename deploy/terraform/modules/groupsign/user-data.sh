@@ -5,6 +5,8 @@ NODE_ENV=production
 SOURCEMAP_PATH=/opt/server/sourcemap.json
 
 REDIS=${redis_address}:${redis_port}
+EVENT_FILE=/var/run/groupsign/hpnv2-events.log
+DEBUG='express:*'
 " > /etc/groupsign
 
 systemctl enable groupsign.service
