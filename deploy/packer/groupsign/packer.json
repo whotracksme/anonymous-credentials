@@ -7,6 +7,7 @@
 
     "tag_commit": "",
     "tag_branch": "",
+    "tag_build_id": "",
 
     "tmp_local_upload_dir": "tmp-upload-dir"
   },
@@ -33,9 +34,24 @@
       "Name": "{{user `prefix`}}{{user `Name`}}-{{isotime \"20060102150405\"}}",
       "Project": "{{user `Project`}}",
       "Owner": "{{user `Owner`}}",
-      "tag_commit": "{{user `tag_commit`}}",
-      "tag_branch": "{{user `tag_branch`}}"
+      "Commit": "{{user `tag_commit`}}",
+      "Branch": "{{user `tag_branch`}}",
+      "BuildId": "{{user `tag_build_id`}}"
     },
+
+    "run_tags": {
+      "Name": "Launched by packer: {{user `prefix`}}{{user `Name`}}",
+      "Project": "{{user `Project`}}",
+      "Owner": "{{user `Owner`}}",
+      "BuildId": "{{user `tag_build_id`}}"
+    },
+    "run_volume_tags": {
+      "Name": "Created by packer: {{user `prefix`}}{{user `Name`}}",
+      "Project": "{{user `Project`}}",
+      "Owner": "{{user `Owner`}}",
+      "BuildId": "{{user `tag_build_id`}}"
+    },
+    "shutdown_behavior": "terminate",
 
     "instance_type": "m3.medium",
     "ssh_username": "ubuntu",

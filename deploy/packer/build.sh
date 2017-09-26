@@ -38,6 +38,9 @@ readonly service=$2
 readonly tag_commit=$(git rev-parse HEAD)
 readonly tag_branch=$(git rev-parse --abbrev-ref HEAD)
 
+# This id is used to simply the cleanup of old AMIs and volumes.
+readonly tag_build_id="$service-$(date '+%Y%m%d%H%M%S')"
+
 echo "*** Clean previous deployment leftovers ***"
 (cd ../.. && make clean-deploy)
 
@@ -68,6 +71,7 @@ packer_out=$(
            -var-file=../common_vars_test.json \
 	   -var "tag_commit=$tag_commit" \
 	   -var "tag_branch=$tag_branch" \
+	   -var "tag_build_id=$tag_build_id" \
            packer.json | tee /dev/tty
 )
 
