@@ -28,6 +28,10 @@ data "template_file" "user_data" {
 resource "aws_autoscaling_group" "groupsign_service" {
   launch_configuration = "${aws_launch_configuration.groupsign_service.id}"
 
+  # Forces the recreation after each change of the AMI,
+  # will will ensure that services are restarted.
+  name_prefix = "${aws_launch_configuration.groupsign_service.name}"
+
   #availability_zones   = ["${data.aws_availability_zones.all.names}"]
   vpc_zone_identifier = [
     "subnet-ec529b85", # public-eu-central-1a
