@@ -33,7 +33,7 @@ resource "aws_security_group_rule" "allow_redis_connections_inbound" {
 resource "aws_elasticache_cluster" "instance" {
   # "gsr" == groupsign-redis
   # (cluster_id is limited to 20 characters)
-  cluster_id = "${var.cluster_prefix}-gsr"
+  cluster_id = "${format("%.20s", "${var.cluster_prefix}-gsr")}"
 
   engine               = "redis"
   node_type            = "${var.node_type}"
