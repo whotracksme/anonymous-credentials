@@ -58,8 +58,9 @@ variable "vpc_id" {
   description = "The VPC in which the EC2 instances will be started"
 }
 
-variable "subnet_id" {
-  description = "The subnet in which the EC2 instances will be started"
+variable "public_subnet_ids" {
+  description = "The subnets in which the internet facing EC2 instances will be started."
+  type = "list"
 }
 
 variable "ami" {

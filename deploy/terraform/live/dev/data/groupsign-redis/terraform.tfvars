@@ -10,7 +10,6 @@ terragrunt = {
       encrypt = true
       bucket = "cliqz-terraform-state-on-cliqz-test"
 
-      # TODO: should we derive it from the path?
       key = "tf-state/hpnv2/dev/groupsign-redis/terraform.tfstate"
       region = "eu-central-1"
       profile = "cliqz-test"

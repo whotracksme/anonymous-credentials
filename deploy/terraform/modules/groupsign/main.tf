@@ -33,11 +33,7 @@ resource "aws_autoscaling_group" "groupsign_service" {
   name_prefix = "${aws_launch_configuration.groupsign_service.name}"
 
   #availability_zones   = ["${data.aws_availability_zones.all.names}"]
-  vpc_zone_identifier = [
-    "subnet-ec529b85", # public-eu-central-1a
-    "subnet-07c52d7c", # public-eu-central-1b
-    "subnet-122e0e58", # public-eu-central-1c
-  ]
+  vpc_zone_identifier = ["${var.public_subnet_ids}"]
 
   load_balancers    = ["${aws_elb.groupsign_service.name}"]
   health_check_type = "ELB"
@@ -118,13 +114,7 @@ resource "aws_elb" "groupsign_service" {
 
   # availability_zones = ["${data.aws_availability_zones.all.names}"]
   security_groups = ["${aws_security_group.elb.id}"]
-
-  # TODO: add variable for public subnets:
-  subnets = [
-    "subnet-ec529b85", # public-eu-central-1a
-    "subnet-07c52d7c", # public-eu-central-1b
-    "subnet-122e0e58", # public-eu-central-1c
-  ]
+  subnets = ["${var.public_subnet_ids}"]
 
   listener {
     lb_port           = 80
