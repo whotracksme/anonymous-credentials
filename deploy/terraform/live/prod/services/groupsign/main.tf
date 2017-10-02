@@ -26,11 +26,13 @@ module "server" {
 
   # "cliqz-default" with its public subnets
   vpc_id = "vpc-c18060a8"
+
   public_subnet_ids = [
     "subnet-877192ee", # public-eu-central-1a
     "subnet-46c4c63e", # public-eu-central-1b
     "subnet-1f527155", # public-eu-central-1c
   ]
+
   ami = "${var.ami}"
 
   # Redis settings

@@ -27,12 +27,14 @@ module "server" {
 
   # VPC: "cliqz-default"
   vpc_id = "vpc-aacd0ac3"
+
   public_subnet_ids = [
     "subnet-ec529b85", # public-eu-central-1a
     "subnet-07c52d7c", # public-eu-central-1b
     "subnet-122e0e58", # public-eu-central-1c
   ]
-  ami       = "${var.ami}"
+
+  ami = "${var.ami}"
 
   # Redis settings
   redis_port    = "${data.terraform_remote_state.redis.port}"

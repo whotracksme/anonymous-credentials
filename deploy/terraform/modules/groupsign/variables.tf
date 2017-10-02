@@ -60,7 +60,7 @@ variable "vpc_id" {
 
 variable "public_subnet_ids" {
   description = "The subnets in which the internet facing EC2 instances will be started."
-  type = "list"
+  type        = "list"
 }
 
 variable "ami" {

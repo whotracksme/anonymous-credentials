@@ -19,7 +19,7 @@ data "template_file" "user_data" {
   template = "${file("${path.module}/user-data.sh")}"
 
   vars {
-    server_port = "${var.server_port}"
+    server_port   = "${var.server_port}"
     redis_address = "${var.redis_address}"
     redis_port    = "${var.redis_port}"
   }
@@ -114,14 +114,7 @@ resource "aws_elb" "groupsign_service" {
 
   # availability_zones = ["${data.aws_availability_zones.all.names}"]
   security_groups = ["${aws_security_group.elb.id}"]
-  subnets = ["${var.public_subnet_ids}"]
-
-  listener {
-    lb_port           = 80
-    lb_protocol       = "http"
-    instance_port     = "${var.server_port}"
-    instance_protocol = "http"
-  }
+  subnets         = ["${var.public_subnet_ids}"]
 
   listener {
     lb_port            = 443
