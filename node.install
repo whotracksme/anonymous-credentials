@@ -1,0 +1,61 @@
+#
+# Defines the NodeJs version that should be consistently used
+# both in docker and for the AMIs.
+#
+# To update to a newer version, you also have to update the checksum
+# (see "sha512_hash" in "install_node")
+#
+NODE_VERSION=v8.5.0
+
+# Note: Needs to be executed as root
+#
+# Installing a recent version of NodeJs is unexpectly tricky on Ubuntu.
+# What we are doing here is to it by hand and download the artifact
+# directly from nodejs.org.
+#
+# Notes why the alternatives do not work (at the moment):
+# - Offical Ubuntu nodejs image: Far too outdated
+# - PPA from deb.nodesource.com: Only allows to install the latest .deb package, not a fixed version
+#   (see https://github.com/nodesource/distributions/issues/33#issuecomment-169345680)
+# - nvm: Does not support system-wide installation
+#
+install_node() {
+  readonly nodejs_download_url="https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.xz"
+  readonly sha512_hash=b0813734d3c1f0fa32378abedc64a64bc9979edc5acd11e45f9caf6feb602d58ffc0d561262c1da138bda3fa0300aa4db409967413b0ed3afa6b0f3d53de85bb
+
+  readonly nodejs_tar_xz=$(mktemp /tmp/nodejs.XXXXXX.tar.xz)
+  curl -s -o $nodejs_tar_xz "$nodejs_download_url"
+  function cleanup {
+    rm -f -- "$nodejs_tar_xz"
+  }
+  trap cleanup EXIT
+
+  echo "Downloading NodeJs from $nodejs_download_url"
+  curl -o "$nodejs_tar_xz" "$nodejs_download_url"
+  
+  echo "Verifying checksum..."
+  readonly checksum=$(sha512sum "$nodejs_tar_xz" | awk '{ print $1 }')
+  if [[ $checksum == $sha512_hash ]]; then
+    echo "Checksum of downloaded artifact matches."
+    echo "Extracting to /usr"
+    tar -C /usr --strip-components 1 -xJf "$nodejs_tar_xz"
+    echo "Extracting to /usr. Done."
+  else
+    echo "ERROR: sha512 checksum did not match!"
+    echo "Expected: $SHA512"
+    echo "Got:      $checksum"
+    echo
+    echo "Refusing to install the downloaded nodejs artifact."
+    echo "Please check the URL and checksum in the 'node.install' script."
+    exit 1
+  fi
+}
+
+check_node_version() {
+  if [ "$(node --version)" == "$NODE_VERSION" ] ; then
+    echo "Node version is as expected: $NODE_VERSION"
+  else
+    printf "\n\nNode version does not match: Expected '$NODE_VERSION', but got '$(node --version)'.\nThe node version is defined in the file 'node.install'.\n\n\n"
+    exit 1
+  fi
+}
