@@ -14,7 +14,7 @@ data "terraform_remote_state" "redis" {
   config {
     # TODO: Can we avoid duplicating this information?
     bucket = "cliqz-terraform-state-on-cliqz-test"
-    key    = "tf-state/hpnv2/dev/groupsign-redis/terraform.tfstate"
+    key    = "tf-state/hpnv2/dev/data/groupsign-redis/terraform.tfstate"
     region = "eu-central-1"
   }
 }
@@ -25,8 +25,13 @@ module "server" {
   #  with commits after each deployment)
   source = "../../../../modules/groupsign"
 
-  subnet_id = "subnet-07c52d7c"
-  vpc_id    = "vpc-aacd0ac3"
+  # VPC: "cliqz-default"
+  vpc_id = "vpc-aacd0ac3"
+  public_subnet_ids = [
+    "subnet-ec529b85", # public-eu-central-1a
+    "subnet-07c52d7c", # public-eu-central-1b
+    "subnet-122e0e58", # public-eu-central-1c
+  ]
   ami       = "${var.ami}"
 
   # Redis settings
@@ -34,7 +39,7 @@ module "server" {
   redis_address = "${data.terraform_remote_state.redis.address}"
 
   # certificate for *.test.cliqz.com
-  dns_zone_id            = "ZASDE0L6R1NKM"                                                                          # *.test.cliqz.com
+  dns_zone_id            = "ZASDE0L6R1NKM"
   elb_ssl_certificate_id = "arn:aws:acm:eu-central-1:494430270403:certificate/b417e86f-e160-41ee-bbc7-b91ef6a174de"
 
   cluster_prefix = "hpnv2-dev"
