@@ -16,7 +16,7 @@ variable "tag_Project" {
 # ELB and Route53 settings:
 variable "dns_name" {
   default     = "groupsign.test.cliqz.com"
-  description = "The Route53 zone id, which must the domain that we used for the DNS name."
+  description = "The Route53 zone id, which must match the domain that we used for the DNS name. Note that by default the name will be prefixed with the cluster id. If that is not desired, disable 'use_cluster_prefix_dns_entry'."
 }
 
 variable "use_cluster_prefix_dns_entry" {

@@ -39,8 +39,12 @@ module "server" {
   redis_port    = "${data.terraform_remote_state.redis.port}"
   redis_address = "${data.terraform_remote_state.redis.address}"
 
+  # DNS
+  dns_name = "collector.hpn.cliqz.com"
+  use_cluster_prefix_dns_entry = 0
+  dns_zone_id            = "Z2XZKECBCM2IDQ"
+
   # certificate for *.cliqz.com
-  dns_zone_id            = "ZDH30YT63WCY1"
   elb_ssl_certificate_id = "arn:aws:iam::141047255820:server-certificate/star_cliqz_sha256"
 
   cluster_prefix = "hpnv2-prod"
