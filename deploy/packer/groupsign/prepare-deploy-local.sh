@@ -20,5 +20,6 @@ done
 readonly git_root_dir="${BASH_SOURCE%/*}/../../../"
 
 ( set -x && cd $git_root_dir && tar --create --gzip --verbose $server_files ) > ./tmp-upload-dir/server.tgz
-#( set -x && cd $git_root_dir/generated-native-libs/release && tar --create --gzip --verbose *.a ) > ./tmp-upload-dir/server-deps.tgz
 ( set -x && cd $git_root_dir/generated-server-deps/release && tar --create --gzip build node_modules ) > ./tmp-upload-dir/server-deps.tgz
+
+printf "Updated files were successfully generated:\n$(du -hs ./tmp-upload-dir)\n"

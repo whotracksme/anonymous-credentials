@@ -24,10 +24,17 @@ if ! [[ $# -eq 2 ]]; then
 fi
 if [[ $1 == "--target=dev" ]]; then
     readonly target="dev"
+    readonly aws_account="test"
+elif [[ $1 == "--target=dev-philipp" ]]; then
+    # TODO: allow all dev-*
+    readonly target="dev-philipp"
+    readonly aws_account="test"
 elif [[ $1 == "--target=stage" ]]; then
     readonly target="stage"
+    readonly aws_account="primary"
 elif [[ $1 == "--target=prod" ]]; then
     readonly target="prod"
+    readonly aws_account="primary"
 else
     print_help
     exit 1
@@ -68,7 +75,7 @@ packer_out=$(
     cd "$service" &&
     packer build $debug_packer \
            -var-file=../common_vars.json \
-           -var-file=../common_vars_test.json \
+           -var-file=../common_vars_${aws_account}.json \
 	   -var "tag_commit=$tag_commit" \
 	   -var "tag_branch=$tag_branch" \
 	   -var "tag_build_id=$tag_build_id" \
