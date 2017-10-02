@@ -12,11 +12,8 @@ DEBIAN_FRONTEND=noninteractive apt-get upgrade -yq
 apt-get update
 
 # Setup Node.js
-#
-# source: https://github.com/nodesource/distributions
-# (installs node v8)
-curl -sL https://deb.nodesource.com/setup_8.x | bash -
-apt-get install -y nodejs
+apt-get install -y curl xz-utils
+(. /tmp/node.install && install_node && check_node_version)
 
 ( cd /opt/ && tar xzfv /tmp/tmp-upload-dir/server.tgz )
 ( cd /opt/server && tar xzf /tmp/tmp-upload-dir/server-deps.tgz )

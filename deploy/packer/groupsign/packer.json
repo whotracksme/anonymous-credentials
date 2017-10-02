@@ -75,6 +75,11 @@
       "source": "./groupsign-exporter.service",
       "destination": "/tmp/groupsign-exporter.service"
     },
+    {
+      "type": "file",
+      "source": "../../../node.install",
+      "destination": "/tmp/node.install"
+    },
 
     {
       "type": "shell-local",
