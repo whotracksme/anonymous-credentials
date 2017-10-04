@@ -116,6 +116,17 @@ resource "aws_elb" "groupsign_service" {
   security_groups = ["${aws_security_group.elb.id}"]
   subnets         = ["${var.public_subnet_ids}"]
 
+  # TODO: Leave enabled during testing.
+  # Once we have found a way to get a certificate on primary,
+  # we can get rid of it again. In general, all traffic
+  # should be sent over https.
+  listener {
+    lb_port            = 80
+    lb_protocol        = "http"
+    instance_port      = "${var.server_port}"
+    instance_protocol  = "http"
+  }
+
   listener {
     lb_port            = 443
     lb_protocol        = "https"
