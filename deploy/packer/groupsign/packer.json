@@ -77,6 +77,21 @@
     },
     {
       "type": "file",
+      "source": "./groupsign-exporter.timer",
+      "destination": "/tmp/groupsign-exporter.timer"
+    },
+    {
+      "type": "file",
+      "source": "./groupsign-exporter-shutdown-hook.service",
+      "destination": "/tmp/groupsign-exporter-shutdown-hook.service"
+    },
+    {
+      "type": "file",
+      "source": "./groupsign-exporter.sh",
+      "destination": "/tmp/groupsign-exporter.sh"
+    },
+    {
+      "type": "file",
       "source": "../../../node.install",
       "destination": "/tmp/node.install"
     },

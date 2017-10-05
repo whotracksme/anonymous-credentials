@@ -10,9 +10,16 @@ resource "aws_launch_configuration" "groupsign_service" {
   user_data         = "${data.template_file.user_data.rendered}"
   enable_monitoring = "${var.detailed_monitoring}"
 
+  iam_instance_profile = "${aws_iam_instance_profile.groupsign_service.name}"
+
   lifecycle {
     create_before_destroy = true
   }
+}
+
+resource "aws_iam_instance_profile" "groupsign_service" {
+  name_prefix = "${var.cluster_prefix}-groupsign_service"
+  role        = "${var.iam_role_with_s3_access}"
 }
 
 data "template_file" "user_data" {
@@ -22,6 +29,8 @@ data "template_file" "user_data" {
     server_port   = "${var.server_port}"
     redis_address = "${var.redis_address}"
     redis_port    = "${var.redis_port}"
+    s3_bucket     = "${var.s3_bucket}"
+    s3_key_prefix = "hpnv2/${var.cluster_prefix}"
   }
 }
 
@@ -121,10 +130,10 @@ resource "aws_elb" "groupsign_service" {
   # we can get rid of it again. In general, all traffic
   # should be sent over https.
   listener {
-    lb_port            = 80
-    lb_protocol        = "http"
-    instance_port      = "${var.server_port}"
-    instance_protocol  = "http"
+    lb_port           = 80
+    lb_protocol       = "http"
+    instance_port     = "${var.server_port}"
+    instance_protocol = "http"
   }
 
   listener {

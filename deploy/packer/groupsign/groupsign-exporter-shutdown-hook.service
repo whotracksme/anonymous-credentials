@@ -1,12 +1,14 @@
 [Unit]
-Description=Exports data written by the groupsign NodeJs server to S3
+Description=Exports data written by the groupsign NodeJs server to S3. To be executed at shutdown.
 After=network.target
 Documentation=https://github.com/cliqz/group-sign
 
 [Service]
 Type=oneshot
+RemainAfterExit=true
 EnvironmentFile=/etc/groupsign
-ExecStart=/opt/exporter/groupsign-exporter.sh
+ExecStart=/bin/true
+ExecStop=/opt/exporter/groupsign-exporter.sh
 
 # Security
 User=groupsign

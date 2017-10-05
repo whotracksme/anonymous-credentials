@@ -19,14 +19,22 @@ apt-get install -y curl xz-utils
 ( cd /opt/server && tar xzf /tmp/tmp-upload-dir/server-deps.tgz )
 
 # setup systemd services (but let cloud-init enable them)
-cp /tmp/groupsign.service          /etc/systemd/system
-cp /tmp/groupsign-exporter.service /etc/systemd/system
+cp /tmp/groupsign.service                        /etc/systemd/system
+cp /tmp/groupsign-exporter.service               /etc/systemd/system
+cp /tmp/groupsign-exporter.timer                 /etc/systemd/system
+cp /tmp/groupsign-exporter-shutdown-hook.service /etc/systemd/system
 
 # create user for groupsign
 # ("--gecos" suppresses interactive dialogs)
 adduser --disabled-password --gecos "" groupsign
 mkdir /mutable
 chown groupsign /mutable
+
+# Setup exporter
+sudo apt-get install -y awscli util-linux xz-utils
+mkdir /opt/exporter
+cp /tmp/groupsign-exporter.sh /opt/exporter
+chmod a+x /opt/exporter/groupsign-exporter.sh
 
 # install SSH keys
 cat /tmp/authorized_keys > /home/ubuntu/.ssh/authorized_keys

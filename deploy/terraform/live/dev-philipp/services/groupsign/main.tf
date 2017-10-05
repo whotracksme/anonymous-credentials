@@ -40,6 +40,10 @@ module "server" {
   redis_port    = "${data.terraform_remote_state.redis.port}"
   redis_address = "${data.terraform_remote_state.redis.address}"
 
+  # Data export of events to S3
+  s3_bucket               = "cliqz-test"
+  iam_role_with_s3_access = "groupsign-s3-access"
+
   # certificate for *.test.cliqz.com
   dns_zone_id            = "ZASDE0L6R1NKM"
   elb_ssl_certificate_id = "arn:aws:acm:eu-central-1:494430270403:certificate/b417e86f-e160-41ee-bbc7-b91ef6a174de"

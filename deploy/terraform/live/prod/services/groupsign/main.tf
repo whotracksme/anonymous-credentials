@@ -35,14 +35,21 @@ module "server" {
 
   ami = "${var.ami}"
 
+  # EC2 settings
+  detailed_monitoring = 1
+
   # Redis settings
   redis_port    = "${data.terraform_remote_state.redis.port}"
   redis_address = "${data.terraform_remote_state.redis.address}"
 
+  # Data export of events to S3
+  s3_bucket               = "cliqz-deploy-primary"
+  iam_role_with_s3_access = "safe-browsing-vpc-0f587bc7634bbb82b01311539a89eb7b"
+
   # DNS
-  dns_name = "collector.hpn.cliqz.com"
+  dns_name                     = "collector.hpn.cliqz.com"
   use_cluster_prefix_dns_entry = 0
-  dns_zone_id            = "Z2XZKECBCM2IDQ"
+  dns_zone_id                  = "Z2XZKECBCM2IDQ"
 
   # certificate for *.cliqz.com
   elb_ssl_certificate_id = "arn:aws:iam::141047255820:server-certificate/star_cliqz_sha256"

@@ -81,3 +81,12 @@ variable "redis_address" {
 variable "redis_port" {
   description = "The port of the groupsign Redis instance"
 }
+
+# S3 export:
+variable "s3_bucket" {
+  description = "S3 bucket to which the collected hpnv2 events will be exported."
+}
+
+variable "iam_role_with_s3_access" {
+  description = "This role will be assigned to the EC2 instance. It should allow write access to the configured S3 bucket."
+}

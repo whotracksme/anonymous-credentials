@@ -5,12 +5,19 @@ NODE_ENV=production
 SOURCEMAP_PATH=/opt/server/sourcemap.json
 
 REDIS=${redis_address}:${redis_port}
-EVENT_FILE=/mutable/hpnv2-events.log
+
+DATA_EXPORT_READY_FOR_EXPORT_DIR=/mutable/events/ready-for-export
+DATA_EXPORT_TMP_DIR=/mutable/events/tmp
+DATA_EXPORT_S3_BUCKET=${s3_bucket}
+DATA_EXPORT_S3_KEY_PREFIX=${s3_key_prefix}
+
 DEBUG='express:*'
 " > /etc/groupsign
 
 systemctl enable groupsign.service
 systemctl start  groupsign.service
 
-systemctl enable groupsign-exporter.service
-systemctl start  groupsign-exporter.service
+systemctl enable groupsign-exporter.timer
+systemctl start  groupsign-exporter.timer
+systemctl enable groupsign-exporter-shutdown-hook.service
+systemctl start  groupsign-exporter-shutdown-hook.service
