@@ -1,5 +1,3 @@
-const ModuleBuilder = typeof WebAssembly !== 'undefined' ? require('./group-sign-bindings') : require('./group-sign-bindings-asmjs');
-
 class GroupSignManager {
   static get BUFFER_SIZE() {
     return 10 * 1024;
