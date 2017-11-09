@@ -141,20 +141,10 @@ static int deserialize_ECP(octet* in, ECP* out)
   return 0;
 }
 
-/* map octet string containing hash to point on curve of correct order */
-// from milagro-crypto-c (mpin.c)
-static void mapit(char *h,ECP *P)
+static void mapit(char *h, ECP *P)
 {
-    BIG q,x,c;
-    BIG_fromBytes(x,h);
-    BIG_rcopy(q,Modulus);
-    BIG_mod(x,q);
-
-    while (!ECP_setx(P,x,0))
-        BIG_inc(x,1);
-
-    BIG_rcopy(c,CURVE_Cof);
-    ECP_mul(P,c);
+    octet o = {32, 32, h};
+    ECP_mapit(P, &o);
 }
 
 static void setG1(ECP* X)
