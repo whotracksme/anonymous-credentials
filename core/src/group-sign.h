@@ -49,6 +49,7 @@ typedef ECP_BN254 ECP;
 #define ECP_copy   ECP_BN254_copy
 #define ECP_isinf  ECP_BN254_isinf
 #define ECP_output ECP_BN254_output
+#define ECP_mapit  ECP_BN254_mapit
 
 typedef ECP2_BN254 ECP2;
 #define ECP2_get       ECP2_BN254_get
@@ -63,7 +64,6 @@ typedef ECP2_BN254 ECP2;
 
 typedef BIG_256_56 BIG;
 #define BIG_get          BIG_256_56_get
-#define BIG_inc          BIG_256_56_inc
 #define BIG_add          BIG_256_56_add
 #define BIG_comp         BIG_256_56_comp
 #define BIG_mod          BIG_256_56_mod
