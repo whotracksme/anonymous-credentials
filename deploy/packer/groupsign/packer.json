@@ -22,7 +22,7 @@
     "source_ami_filter": {
       "filters": {
         "virtualization-type": "hvm",
-        "name": "*ubuntu-zesty-17.04-amd64-server-*",
+        "name": "*ubuntu-artful-17.10-amd64-server-*",
         "root-device-type": "ebs"
       },
       "owners": ["099720109477"],
