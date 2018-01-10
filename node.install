@@ -5,7 +5,7 @@
 # To update to a newer version, you also have to update the checksum
 # (see "sha512_hash" in "install_node")
 #
-NODE_VERSION=v8.9.1
+NODE_VERSION=v8.9.4
 
 # Note: Needs to be executed as root
 #
@@ -21,7 +21,7 @@ NODE_VERSION=v8.9.1
 #
 install_node() {
   readonly nodejs_download_url="https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.xz"
-  readonly sha512_hash=6eeff6ec9b3170f033882e5870d2c4db0e9a7341d4ecd43a76731e3e455ada762c964d9afb808f40911abf9e000ca37186d7d95080bb433b9ed0f462e677de1f
+  readonly sha512_hash=909ce0b73f2a95483d20806ac9e30db74efe47e85bd7d1921857dbc46319adf1eede76ed98b201be604cf3f45923a66d74b944f9ca4bb81d8ef9493dc92f66f4
 
   readonly nodejs_tar_xz=$(mktemp /tmp/nodejs.XXXXXX.tar.xz)
   curl -s -o $nodejs_tar_xz "$nodejs_download_url"
