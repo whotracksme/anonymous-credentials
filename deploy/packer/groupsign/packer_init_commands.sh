@@ -36,5 +36,8 @@ mkdir /opt/exporter
 cp /tmp/groupsign-exporter.sh /opt/exporter
 chmod a+x /opt/exporter/groupsign-exporter.sh
 
+# forces vim as the default editor
+apt-get purge -y nano
+
 # install SSH keys
 cat /tmp/authorized_keys > /home/ubuntu/.ssh/authorized_keys
