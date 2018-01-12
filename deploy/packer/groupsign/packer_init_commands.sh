@@ -24,6 +24,16 @@ cp /tmp/groupsign-exporter.service               /etc/systemd/system
 cp /tmp/groupsign-exporter.timer                 /etc/systemd/system
 cp /tmp/groupsign-exporter-shutdown-hook.service /etc/systemd/system
 
+# enable persistent logging
+#
+# Needed for Ubuntu 16.04. By default, it will only keep
+# logs for a short time in memory. If the directory exists,
+# it automatically switches to persistent logging.
+#
+# May change in future Ubuntu versions:
+# https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1618188
+sudo mkdir -p /var/log/journal
+
 # create user for groupsign
 # ("--gecos" suppresses interactive dialogs)
 adduser --disabled-password --gecos "" groupsign
