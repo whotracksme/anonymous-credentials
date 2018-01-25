@@ -65,8 +65,12 @@ for snapshot in ec2.snapshots.filter(Filters=filter_for_build_ids).all():
 
 # first: oldest, last: newest
 ordered_build_ids = sorted(id for id in build_ids_to_snapshot.keys() if re.match(GROUPSIGN_PATTERN, id))
-build_ids_to_keep = ordered_build_ids[-keep_last:]
-build_ids_to_delete = ordered_build_ids[:-keep_last]
+if keep_last > 0:
+    build_ids_to_keep = ordered_build_ids[-keep_last:]
+    build_ids_to_delete = ordered_build_ids[:-keep_last]
+else:
+    build_ids_to_keep = []
+    build_ids_to_delete = ordered_build_ids
 
 print('The following build ids will be kept (last {} builds):'.format(keep_last))
 for id in build_ids_to_keep:
