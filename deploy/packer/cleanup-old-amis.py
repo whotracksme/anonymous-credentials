@@ -15,7 +15,7 @@ from distutils.util import strtobool
 
 dry_run = False
 keep_last = 3
-owners = ['philipp@cliqz.com']
+owners = ['alex@cliqz.com', 'philipp@cliqz.com']
 
 def confirm(question):
     # for python 2 (https://stackoverflow.com/a/7321970/783510)
@@ -51,7 +51,7 @@ for ami in ec2.images.filter(Filters=ami_filters).all():
 
 filter_for_build_ids = [
     { 'Name': 'tag:Project', 'Values': ['hpnv2'] },
-    { 'Name': 'tag:Owner', 'Values': ['philipp@cliqz.com'] },
+    { 'Name': 'tag:Owner', 'Values': owners },
     { 'Name': 'tag:BuildId', 'Values': [str(id) for id in build_ids_to_ami.keys()] }
 ]
 
