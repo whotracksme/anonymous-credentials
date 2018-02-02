@@ -1,7 +1,6 @@
-BUILD_TYPE=Debug
+. ./config.release
 
-CC=clang
-CXX=clang++
+BUILD_TYPE=Debug
 
 DEFAULT_FLAGS="-g -fPIC"
 
