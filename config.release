@@ -1,8 +1,5 @@
 BUILD_TYPE=Release
 
-CC=clang
-CXX=clang++
-
 DEFAULT_FLAGS="-O3 -DNDEBUG -fPIC"
 
 # Native compiler:

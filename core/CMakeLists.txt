@@ -16,4 +16,4 @@ if (ENABLE_TESTS)
   add_subdirectory(test)
 endif()
 
-add_subdirectory(../milagro-crypto-c milagro-crypto-c)
+add_subdirectory(../external/milagro-crypto-c milagro-crypto-c)
