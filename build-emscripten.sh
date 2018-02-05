@@ -3,8 +3,9 @@
 set -e
 set -x
 
-BUILDFOLDER=embuild
-DISTFOLDER=dist
+SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
+BUILDFOLDER="$SCRIPTPATH/_build/embuild"
+DISTFOLDER="$SCRIPTPATH/dist"
 
 EMSCRIPTEN_PATH=${EMSCRIPTEN_PATH:-~/emsdk}
 
@@ -20,7 +21,7 @@ then
   . ./config.release
 fi
 
-( rm -rf $BUILDFOLDER && mkdir $BUILDFOLDER && \
+( rm -rf $BUILDFOLDER && mkdir -p $BUILDFOLDER && \
     cd $BUILDFOLDER && \
     emcmake cmake \
       -DENABLE_TESTS=$ENABLE_TESTS \
@@ -29,13 +30,15 @@ fi
       -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
       -DBUILD_SHARED_LIBS=OFF \
       -DAMCL_CURVE=BN254 \
-      ../core && \
+      $SCRIPTPATH/core && \
     emmake make VERBOSE=1)
 
 name_0="wasm"
 flags_0="-s WASM=1"
 name_1="asmjs"
 flags_1="-s WASM=0"
+
+rm -rf $DISTFOLDER;
 
 for emidx in 0 1
 do
@@ -44,7 +47,7 @@ EMNAME=${!EMNAME}
 EMFLAGS="flags_$emidx"
 EMFLAGS=${!EMFLAGS}
 
-( mkdir -p "$(pwd)/$DISTFOLDER" && \
+( mkdir -p $DISTFOLDER && \
   emcc ${EMFLAGS} \
     --pre-js pre.js \
     -s SINGLE_FILE=1 \
@@ -53,13 +56,13 @@ EMFLAGS=${!EMFLAGS}
     $EMCC_FLAGS \
     -std=c11 -Wall -Wextra -Wno-strict-prototypes -Wunused-value -Wcast-align \
     -Wunused-variable -Wundef -Wformat-security -Wshadow \
-    -o "$(pwd)/$DISTFOLDER/group-sign-$EMNAME.js" \
-    -L$(pwd)/$BUILDFOLDER/milagro-crypto-c/src -Wl,-rpath,$(pwd)/$BUILDFOLDER/milagro-crypto-c/src \
+    -o "$DISTFOLDER/group-sign-$EMNAME.js" \
+    -L$BUILDFOLDER/milagro-crypto-c/src -Wl,-rpath,$BUILDFOLDER/milagro-crypto-c/src \
     -rdynamic \
-    $(pwd)/$BUILDFOLDER/src/libgroupsign.a \
-    $(pwd)/$BUILDFOLDER/milagro-crypto-c/lib/libamcl_curve_BN254.a \
-    $(pwd)/$BUILDFOLDER/milagro-crypto-c/lib/libamcl_core.a \
-    $(pwd)/$BUILDFOLDER/milagro-crypto-c/lib/libamcl_pairing_BN254.a \
+    $BUILDFOLDER/src/libgroupsign.a \
+    $BUILDFOLDER/milagro-crypto-c/lib/libamcl_curve_BN254.a \
+    $BUILDFOLDER/milagro-crypto-c/lib/libamcl_core.a \
+    $BUILDFOLDER/milagro-crypto-c/lib/libamcl_pairing_BN254.a \
     -s EXPORTED_FUNCTIONS="[\
        '_GS_seed', \
        '_GS_createState', \

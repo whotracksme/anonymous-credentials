@@ -6,7 +6,8 @@ set -x
 CC=clang
 CXX=clang++
 
-BUILDFOLDER=nativebuild
+SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
+BUILDFOLDER="$SCRIPTPATH/_build/nativebuild"
 
 if [ -z "$BUILD_TYPE" ]
 then
@@ -14,7 +15,7 @@ then
 fi
 
 rm -rf $BUILDFOLDER && \
-    mkdir $BUILDFOLDER && \
+    mkdir -p $BUILDFOLDER && \
     cd $BUILDFOLDER && \
     cmake \
       -DENABLE_TESTS=$ENABLE_TESTS \
@@ -25,6 +26,6 @@ rm -rf $BUILDFOLDER && \
       -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
       -DBUILD_SHARED_LIBS=OFF \
       -DAMCL_CURVE=BN254 \
-      ../core \
+      $SCRIPTPATH/core \
     && \
     VERBOSE=1 make
