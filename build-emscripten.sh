@@ -7,14 +7,17 @@ SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
 BUILDFOLDER="$SCRIPTPATH/_build/embuild"
 DISTFOLDER="$SCRIPTPATH/dist"
 
-EMSCRIPTEN_PATH=${EMSCRIPTEN_PATH:-~/emsdk}
+if [ -z "$EMSCRIPTEN" ]
+then
+  EMSCRIPTEN_PATH=${EMSCRIPTEN_PATH:-~/emsdk}
 
-if [ ! -f "$EMSCRIPTEN_PATH/emsdk_env.sh" ]; then
-    echo "emscripten installation not found" ;
-    exit 1 ;
+  if [ ! -f "$EMSCRIPTEN_PATH/emsdk_env.sh" ]; then
+      echo "emscripten installation not found" ;
+      exit 1 ;
+  fi
+
+  . "$EMSCRIPTEN_PATH/emsdk_env.sh"
 fi
-
-. "$EMSCRIPTEN_PATH/emsdk_env.sh"
 
 if [ -z "$BUILD_TYPE" ]
 then
