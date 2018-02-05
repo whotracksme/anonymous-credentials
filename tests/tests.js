@@ -1,14 +1,12 @@
 const expect = require('chai').expect;
 
-const GroupSignerNative = require('bindings')('addon').GroupSigner;
+const testModules = {
+  native: '../lib/index',
+  wasm: '../dist/group-sign-wasm',
+  asmjs: '../dist/group-sign-asmjs',
+};
 
-const ModuleWasm = require('../embuild/wasm/group-sign')();
-const GroupSignerWasm = ModuleWasm.GroupSignManager;
-
-const ModuleAsmjs = require('../embuild/asmjs/group-sign')();
-const GroupSignerAsmjs = ModuleAsmjs.GroupSignManager;
-
-function doTests(name, GroupSigner, beforePromise = Promise.resolve()) {
+function doTests(name, { getGroupSigner }) {
   const seed1 = new Uint8Array(128);
   const seed2 = new Uint8Array(128);
   
@@ -17,8 +15,11 @@ function doTests(name, GroupSigner, beforePromise = Promise.resolve()) {
     seed2[i] = i + 1;
   }
   describe('GroupSigner - ' + name, () => {
+    var GroupSigner;
     before(function() {
-      return beforePromise;
+      return getGroupSigner().then((s) => {
+        GroupSigner = s;
+      });
     });
     it('seed', () => {
       expect(() => {
@@ -118,6 +119,7 @@ function doTests(name, GroupSigner, beforePromise = Promise.resolve()) {
   });
 }
 
-doTests('native', GroupSignerNative);
-doTests('wasm', GroupSignerWasm, ModuleWasm);
-doTests('asmjs', GroupSignerAsmjs, ModuleAsmjs);
+
+Object.keys(testModules).forEach((name) => {
+  doTests(name, require(testModules[name]));
+});

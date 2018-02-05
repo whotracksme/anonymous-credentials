@@ -1001,3 +1001,7 @@ int GS_getSignatureTag(char* signature, int sig_len, char* tag, int* tag_len) {
   *tag_len = oo.len;
   return GS_RETURN_SUCCESS;
 }
+
+int GS_getStateSize() {
+  return sizeof(GS_State);
+}
