@@ -256,6 +256,8 @@ extern int GS_verify(void* state, Byte32 msg, Byte32 bsn, char* signature, int l
 
 extern int GS_getSignatureTag(char* signature, int sig_len, char* tag, int* tag_len);
 
+extern int GS_getStateSize();
+
 #ifdef __cplusplus
 } // end extern "C"
 #endif

@@ -1,6 +1,3 @@
-// TODO: emcc flag for this?
-Module.noInitialRun = true;
-
 function _arrayToPtr(data, ptr) {
   if (data.length > GroupSignManager.BUFFER_SIZE) {
     throw new Error('Data size exceeded');
@@ -9,7 +6,7 @@ function _arrayToPtr(data, ptr) {
   return ptr;
 }
 
-Module.initPromise = new Promise(function(resolve, reject) {
+var initPromise = new Promise(function(resolve, reject) {
   var t = setTimeout(function() {
     reject(new Error('group-signer init timed out'));
   }, 30 * 1000);
@@ -24,25 +21,37 @@ Module.initPromise = new Promise(function(resolve, reject) {
 function GroupSignManager() {
   this.buffers = [];
   this._makeBindings();
-  this.state = Module._GS_createState();
+
+  // Avoid storing state in Module heap
+  this.stateSize = Module._GS_getStateSize();
+  var state = Module._GS_createState();
+  this._updateState(state);
+  Module._GS_destroyState(state);
 }
 
 GroupSignManager.BUFFER_SIZE = 10 * 1024;
 
-GroupSignManager.prototype.destroy = function() {
-  if (this.state !== undefined) {
-    this.buffers.forEach(function(buf) { _free(buf); });
-    this.buffers = [];
-    Module._GS_destroyState(this.state);
-    delete this.state;
-  }
+GroupSignManager.prototype._getBuffer = function() {
+  // TODO: reduce the conservative upper bound BUFFER_SIZE
+  const buffer = _malloc(GroupSignManager.BUFFER_SIZE);
+  this.buffers.push(buffer);
+  return buffer;
 }
 
-GroupSignManager.prototype._getBuffer = function(n) {
-  if (n >= this.buffers.length) {
-    this.buffers.push(_malloc(GroupSignManager.BUFFER_SIZE));
-  }
-  return this.buffers[n];
+GroupSignManager.prototype._freeBuffers = function() {
+  this.buffers.forEach(function(buffer) {
+    _free(buffer);
+  });
+  this.buffers = [];
+}
+
+GroupSignManager.prototype._updateState = function(state) {
+  // TODO: don't allocate every time
+  this.state = (new Uint8Array(
+    HEAPU8.buffer,
+    state,
+    this.stateSize
+  )).slice();
 }
 
 GroupSignManager.prototype._makeBindings = function() {
@@ -53,76 +62,83 @@ GroupSignManager.prototype._makeBindings = function() {
     context = context === undefined ? true : context;
 
     return function() {
-      var args = Array.prototype.slice.call(arguments);
-      if (args.length !== inputs.length) {
-        throw new Error('Args num mismatch');
-      }
-      if (!args.every(function(arg) { return arg instanceof Uint8Array; })) {
-        throw new Error('Args must be Uint8Array');
-      }
-
-      var funcArgs = [];
-      if (context) {
-        funcArgs.push(self.state);
-      }
-      inputs.forEach(function(size, i) {
-        if (size && args[i].length !== size) {
-          throw new Error('Args size mismatch');
+      try {
+        var state = _arrayToPtr(self.state, self._getBuffer());
+        var args = Array.prototype.slice.call(arguments);
+        if (args.length !== inputs.length) {
+          throw new Error('Args num mismatch');
+        }
+        if (!args.every(function(arg) { return arg instanceof Uint8Array; })) {
+          throw new Error('Args must be Uint8Array');
         }
 
-        var ptr = _arrayToPtr(args[i], self._getBuffer(i));
-        funcArgs.push(ptr);
-        if (!size) {
-          funcArgs.push(args[i].length);
+        var funcArgs = [];
+        if (context) {
+          funcArgs.push(state);
         }
-      });
-      if (output === 'array') {
-        var ptr = self._getBuffer(inputs.length);
-        setValue(ptr, GroupSignManager.BUFFER_SIZE - 4, 'i32');
-        funcArgs.push(ptr + 4);
-        funcArgs.push(ptr);
-      } else if (output === 'joinstatic') {
-        var ptr = self._getBuffer(inputs.length);
-        setValue(ptr, GroupSignManager.BUFFER_SIZE - 4, 'i32');
-        funcArgs.push(ptr + 4);
-        funcArgs.push(ptr);
+        inputs.forEach(function(size, i) {
+          if (size && args[i].length !== size) {
+            throw new Error('Args size mismatch');
+          }
 
-        var ptr2 = self._getBuffer(inputs.length + 1);
-        setValue(ptr2, GroupSignManager.BUFFER_SIZE - 4, 'i32');
-        funcArgs.push(ptr2 + 4);
-        funcArgs.push(ptr2);
-      }
+          var ptr = _arrayToPtr(args[i], self._getBuffer());
+          funcArgs.push(ptr);
+          if (!size) {
+            funcArgs.push(args[i].length);
+          }
+        });
+        if (output === 'array') {
+          var ptr = self._getBuffer();
+          setValue(ptr, GroupSignManager.BUFFER_SIZE - 4, 'i32');
+          funcArgs.push(ptr + 4);
+          funcArgs.push(ptr);
+        } else if (output === 'joinstatic') {
+          var ptr = self._getBuffer();
+          setValue(ptr, GroupSignManager.BUFFER_SIZE - 4, 'i32');
+          funcArgs.push(ptr + 4);
+          funcArgs.push(ptr);
 
-      var res = Module[func].apply(Module, funcArgs);
-      // TODO: we should probably have a way to check if there was an error for verify
-      if (output === 'boolean') {
-        return res === 1;
-      } else {
-        if (res !== 1) {
-          throw new Error('Internal error');
+          var ptr2 = self._getBuffer();
+          setValue(ptr2, GroupSignManager.BUFFER_SIZE - 4, 'i32');
+          funcArgs.push(ptr2 + 4);
+          funcArgs.push(ptr2);
         }
-        if (output === 'joinstatic') {
-          var ptrjoinmsg = funcArgs[funcArgs.length - 1];
-          var ptrgsk = funcArgs[funcArgs.length - 3];
-          var gsk = (new Uint8Array(
-            HEAPU8.buffer,
-            ptrgsk + 4,
-            getValue(ptrgsk, 'i32')
-          )).slice();
-          var joinmsg = (new Uint8Array(
-            HEAPU8.buffer,
-            ptrjoinmsg + 4,
-            getValue(ptrjoinmsg, 'i32')
-          )).slice();
-          return { gsk: gsk, joinmsg: joinmsg };
-        } else if (output) {
-          var ptr = funcArgs[funcArgs.length - 1];
-          return (new Uint8Array(
-            HEAPU8.buffer,
-            ptr + 4,
-            getValue(ptr, 'i32')
-          )).slice();
+
+        var res = Module[func].apply(Module, funcArgs);
+        this._updateState(state);
+
+        // TODO: we should probably have a way to check if there was an error for verify
+        if (output === 'boolean') {
+          return res === 1;
+        } else {
+          if (res !== 1) {
+            throw new Error('Internal error');
+          }
+          if (output === 'joinstatic') {
+            var ptrjoinmsg = funcArgs[funcArgs.length - 1];
+            var ptrgsk = funcArgs[funcArgs.length - 3];
+            var gsk = (new Uint8Array(
+              HEAPU8.buffer,
+              ptrgsk + 4,
+              getValue(ptrgsk, 'i32')
+            )).slice();
+            var joinmsg = (new Uint8Array(
+              HEAPU8.buffer,
+              ptrjoinmsg + 4,
+              getValue(ptrjoinmsg, 'i32')
+            )).slice();
+            return { gsk: gsk, joinmsg: joinmsg };
+          } else if (output) {
+            var ptr = funcArgs[funcArgs.length - 1];
+            return (new Uint8Array(
+              HEAPU8.buffer,
+              ptr + 4,
+              getValue(ptr, 'i32')
+            )).slice();
+          }
         }
+      } finally {
+        this._freeBuffers();
       }
     }
   }
@@ -145,4 +161,8 @@ GroupSignManager.prototype._makeBindings = function() {
   this.finishJoinStatic = _('_GS_finishJoinStatic', [0, 0, 0], 'array', false);
 }
 
-Module.GroupSignManager = GroupSignManager;
+Module.getGroupSigner = function () {
+  return initPromise.then(function () {
+    return GroupSignManager;
+  });
+}

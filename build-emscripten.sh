@@ -4,6 +4,7 @@ set -e
 set -x
 
 BUILDFOLDER=embuild
+DISTFOLDER=dist
 
 EMSCRIPTEN_PATH=${EMSCRIPTEN_PATH:-~/emsdk}
 
@@ -31,29 +32,28 @@ fi
       ../core && \
     emmake make VERBOSE=1)
 
-folder_0="wasm"
+name_0="wasm"
 flags_0="-s WASM=1"
-folder_1="asmjs"
+name_1="asmjs"
 flags_1="-s WASM=0"
 
 for emidx in 0 1
 do
-EMFOLDER="folder_$emidx"
-EMFOLDER=${!EMFOLDER}
+EMNAME="name_$emidx"
+EMNAME=${!EMNAME}
 EMFLAGS="flags_$emidx"
 EMFLAGS=${!EMFLAGS}
 
-( mkdir "$(pwd)/$BUILDFOLDER/${EMFOLDER}" && \
+( mkdir -p "$(pwd)/$DISTFOLDER" && \
   emcc ${EMFLAGS} \
     --pre-js pre.js \
-    -s MODULARIZE=1 \
     -s SINGLE_FILE=1 \
     -s NO_EXIT_RUNTIME=1 \
     -s ASSERTIONS=$EMCC_ASSERTIONS \
     $EMCC_FLAGS \
     -std=c11 -Wall -Wextra -Wno-strict-prototypes -Wunused-value -Wcast-align \
     -Wunused-variable -Wundef -Wformat-security -Wshadow \
-    -o "$(pwd)/$BUILDFOLDER/${EMFOLDER}/group-sign.js" \
+    -o "$(pwd)/$DISTFOLDER/group-sign-$EMNAME.js" \
     -L$(pwd)/$BUILDFOLDER/milagro-crypto-c/src -Wl,-rpath,$(pwd)/$BUILDFOLDER/milagro-crypto-c/src \
     -rdynamic \
     $(pwd)/$BUILDFOLDER/src/libgroupsign.a \
@@ -78,7 +78,8 @@ EMFLAGS=${!EMFLAGS}
        '_GS_getSignatureTag', \
        '_GS_destroyState', \
        '_GS_startJoinStatic', \
-       '_GS_finishJoinStatic' \
+       '_GS_finishJoinStatic', \
+       '_GS_getStateSize' \
        ]" \
 )
 done
