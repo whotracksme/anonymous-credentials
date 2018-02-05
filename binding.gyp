@@ -5,8 +5,8 @@
             "sources": [ "addon.c" ],
             'link_settings': {
                 'libraries': [
-                    '-L<(module_root_dir)/nativebuild/src',
-                    '-L<(module_root_dir)/nativebuild/milagro-crypto-c/lib',
+                    '-L<(module_root_dir)/_build/nativebuild/src',
+                    '-L<(module_root_dir)/_build/nativebuild/milagro-crypto-c/lib',
                     '-lgroupsign',
                     '-lamcl_core',
                     '-lamcl_curve_BN254',
