@@ -48,13 +48,16 @@ void log_state(int state)
       flag_GS_USERCREDS = "GS_USERCREDS";
     }
 
-    printf("state changed to %d (%s %s %s %s %s)\n",
-           state,
-           flag_GS_SEEDED,
-           flag_GS_GROUP_PRIVKEY,
-           flag_GS_GROUP_PUBKEY,
-           flag_GS_STARTJOIN,
-           flag_GS_USERCREDS);
+    if(VERBOSE_LOGGING)
+    {
+      printf("state changed to %d (%s %s %s %s %s)\n",
+             state,
+             flag_GS_SEEDED,
+             flag_GS_GROUP_PRIVKEY,
+             flag_GS_GROUP_PUBKEY,
+             flag_GS_STARTJOIN,
+             flag_GS_USERCREDS);
+    }
   }
 }
 
