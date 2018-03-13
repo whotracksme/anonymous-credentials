@@ -34,7 +34,7 @@ fi
       -DBUILD_SHARED_LIBS=OFF \
       -DAMCL_CURVE=BN254 \
       $SCRIPTPATH/core && \
-    emmake make VERBOSE=1)
+    emmake make -j $(getconf _NPROCESSORS_ONLN) VERBOSE=1)
 
 name_0="wasm"
 flags_0="-s WASM=1"
