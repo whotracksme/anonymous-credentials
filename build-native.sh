@@ -26,6 +26,7 @@ rm -rf $BUILDFOLDER && \
       -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
       -DBUILD_SHARED_LIBS=OFF \
       -DAMCL_CURVE=BN254 \
+      -DWORD_SIZE=64 \
       $SCRIPTPATH/core \
     && \
     VERBOSE=1 make
