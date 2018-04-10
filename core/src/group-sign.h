@@ -27,6 +27,8 @@ typedef FP_BN254   FP;
 typedef FP2_BN254  FP2;
 typedef FP12_BN254 FP12;
 #define FP12_equals FP12_BN254_equals
+#define FP12_one FP12_BN254_one
+#define FP12_mul FP12_BN254_mul
 
 #define Modulus     Modulus_BN254
 #define MODBYTES    MODBYTES_256_56
@@ -82,6 +84,7 @@ typedef BIG_256_56 BIG;
 #define PAIR_G2mul       PAIR_BN254_G2mul
 #define PAIR_fexp        PAIR_BN254_fexp
 #define PAIR_ate         PAIR_BN254_ate
+#define PAIR_double_ate  PAIR_BN254_double_ate
 
 typedef char Byte32[32];
 
@@ -175,7 +178,7 @@ extern int join_finish_client(struct GroupPublicKey *pub, struct UserPrivateKey 
 extern void sign(csprng *RNG, struct UserPrivateKey *priv, Byte32 msg, Byte32 bsn, struct Signature *sig);
 
 // msg and octet len should be 32 bytes!!! just do sha256 before.
-extern int verify(Byte32 msg, Byte32 bsn, struct Signature *sig, struct GroupPublicKey *pub);
+extern int verify(Byte32 msg, Byte32 bsn, struct Signature *sig, struct GroupPublicKey *pub, csprng *RNG);
 
 
 
