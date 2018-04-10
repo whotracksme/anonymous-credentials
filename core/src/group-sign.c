@@ -71,6 +71,16 @@ static void PAIR_normalized_ate(FP12_BN254 *r, ECP2_BN254 *P, ECP_BN254 *Q)
   PAIR_ate(r, P, Q);
 }
 
+static void PAIR_normalized_double_ate(FP12_BN254 *r, ECP2_BN254 *P, ECP_BN254 *Q, ECP2_BN254 *R, ECP_BN254 *S)
+{
+  ECP2_affine(P);
+  ECP_affine(Q);
+  ECP2_affine(R);
+  ECP_affine(S);
+
+  PAIR_double_ate(r, P, Q, R, S);
+}
+
 static int serialize_BIG(BIG* in, octet* out)
 {
   int len = out->len;
@@ -357,6 +367,87 @@ static int verifyECP2Proof(ECP2* G, ECP2* Y, BIG c, BIG s)
     ECP2challenge(Y, G, &GS, cc);
     return BIG_comp(c, cc) == 0;
 }
+
+// According to https://eprint.iacr.org/2009/598.pdf we can transform
+// the original check e(A, Y) == e(B, G2) and e(C, G2) == e(A + D, X)?
+// into a product of four pairings:
+//
+// e(e1·A, Y)·
+// e(-e1·B, G2)·
+// e(e2·(A + D), X)·
+// e(-e2·C, G2) == 1?
+//
+// Then, according to https://eprint.iacr.org/2014/401.pdf
+// we can also factor out pairings sharing a common element, leading to
+// the following product of three pairings:
+//
+// e(e1·A, Y)·
+// e((-e1·B) + (-e2·C), G2)·
+// e(e2·(A + D), X) == 1?
+//
+// TODO: we should implement our PAIR_triple_ate. For now, using existing
+// PAIR_double_ate and PAIR_ate for the remaining pairing.
+//
+static int verifyAuxFast(ECP* A, ECP* B, ECP* C, ECP* D, ECP2* X, ECP2 *Y, csprng *RNG) {
+  ECP AA, BB, CC;
+  ECP2 G2;
+  BIG e1, e2, ne1, ne2, order;
+  FP12 w, y;
+
+  // A != 1
+  if (ECP_isinf(A)) {
+      return 0;
+  }
+
+  BIG_rcopy(order, CURVE_Order);
+  setG2(&G2);
+
+  // TODO: Paper says these factors should be half the bits of the group order, but I think this is
+  // because of efficiency. Not sure if this makes a difference with milagro-crypto-c, would
+  // need to test.
+  randomModOrder(e1, RNG);
+  randomModOrder(e2, RNG);
+  BIG_modneg(ne1, e1, order);
+  BIG_modneg(ne2, e2, order);
+
+  // AA = e1·A
+  ECP_copy(&AA, A);
+  PAIR_G1mul(&AA, e1);
+
+  // BB = -e1·B
+  ECP_copy(&BB, B);
+  PAIR_G1mul(&BB, ne1);
+
+  // CC = -e2·C
+  ECP_copy(&CC, C);
+  PAIR_G1mul(&CC, ne2);
+
+  // BB = (-e1·B) + (-e2·C)
+  ECP_add(&BB, &CC);
+
+  // w = e(e1·A, Y)·e((-e1·B) + (-e2·C), G2)
+  PAIR_normalized_double_ate(&w, Y, &AA, &G2, &BB);
+  PAIR_fexp(&w);
+
+  // AA = e2·(A + D)
+  ECP_copy(&AA, A);
+  ECP_add(&AA, D);
+  PAIR_G1mul(&AA, e2);
+
+  // y = e(e2·(A + D), X)
+  PAIR_normalized_ate(&y, X, &AA);
+  PAIR_fexp(&y);
+
+  FP12_mul(&w, &y);
+  FP12_one(&y);
+
+  if (!FP12_equals(&w, &y)) {
+      return 0;
+  }
+
+  return 1;
+}
+
 
 // Do we need e(X, a)· e(X, b) ** m == e(g1, c)? See 4.2
 static int verifyAux(ECP* A, ECP* B, ECP* C, ECP* D, ECP2* X, ECP2 *Y)
@@ -676,7 +767,7 @@ void sign(csprng *RNG, struct UserPrivateKey *priv, Byte32 msg, Byte32 bsn, stru
     makeECPProofEquals(RNG, &sig->B, &BSN, &sig->D, &sig->NYM, priv->gsk, hh_msg_bsn, sig->c, sig->s);
 }
 
-int verify(char *msg, char *bsn, struct Signature *sig, struct GroupPublicKey *pub)
+int verify(char *msg, char *bsn, struct Signature *sig, struct GroupPublicKey *pub, csprng *RNG)
 {
     // Map basename to point in G1 (bsn should be 32 bytes and result of crypto hash like sha256)
     ECP BSN;
@@ -692,7 +783,7 @@ int verify(char *msg, char *bsn, struct Signature *sig, struct GroupPublicKey *p
 
     return verifyECPProofEquals(&sig->B, &BSN, &sig->D, &sig->NYM, hh_msg_bsn, sig->c, sig->s)
      && !ECP_isinf(&sig->A) && !ECP_isinf(&sig->B)
-     && verifyAux(&sig->A, &sig->B, &sig->C, &sig->D, &pub->X, &pub->Y);
+     && verifyAuxFast(&sig->A, &sig->B, &sig->C, &sig->D, &pub->X, &pub->Y, RNG);
 }
 
 
@@ -988,7 +1079,7 @@ int GS_verify(void* rawstate, Byte32 msg, Byte32 bsn, char* signature, int len) 
   if (!deserialize_signature(&o, &sig)) {
     return GS_INVALID_DATA;
   }
-  if (!verify(msg, bsn, &sig, &state->_priv.pub)) {
+  if (!verify(msg, bsn, &sig, &state->_priv.pub, &state->_rng)) {
     return GS_RETURN_FAILURE;
   }
   return GS_RETURN_SUCCESS;
