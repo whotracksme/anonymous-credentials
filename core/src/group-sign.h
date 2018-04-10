@@ -84,7 +84,7 @@ typedef BIG_256_56 BIG;
 #define PAIR_G2mul       PAIR_BN254_G2mul
 #define PAIR_fexp        PAIR_BN254_fexp
 #define PAIR_ate         PAIR_BN254_ate
-#define PAIR_double_ate  PAIR_BN254_double_ate
+#define PAIR_triple_ate  PAIR_BN254_triple_ate
 
 typedef char Byte32[32];
 

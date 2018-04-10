@@ -71,14 +71,16 @@ static void PAIR_normalized_ate(FP12_BN254 *r, ECP2_BN254 *P, ECP_BN254 *Q)
   PAIR_ate(r, P, Q);
 }
 
-static void PAIR_normalized_double_ate(FP12_BN254 *r, ECP2_BN254 *P, ECP_BN254 *Q, ECP2_BN254 *R, ECP_BN254 *S)
+static void PAIR_normalized_triple_ate(FP12_BN254 *r, ECP2_BN254 *P, ECP_BN254 *Q, ECP2_BN254 *R, ECP_BN254 *S, ECP2_BN254 *T, ECP_BN254 *U)
 {
   ECP2_affine(P);
   ECP_affine(Q);
   ECP2_affine(R);
   ECP_affine(S);
+  ECP2_affine(T);
+  ECP_affine(U);
 
-  PAIR_double_ate(r, P, Q, R, S);
+  PAIR_triple_ate(r, P, Q, R, S, T, U);
 }
 
 static int serialize_BIG(BIG* in, octet* out)
@@ -385,9 +387,6 @@ static int verifyECP2Proof(ECP2* G, ECP2* Y, BIG c, BIG s)
 // e((-e1·B) + (-e2·C), G2)·
 // e(e2·(A + D), X) == 1?
 //
-// TODO: we should implement our PAIR_triple_ate. For now, using existing
-// PAIR_double_ate and PAIR_ate for the remaining pairing.
-//
 static int verifyAuxFast(ECP* A, ECP* B, ECP* C, ECP* D, ECP2* X, ECP2 *Y, csprng *RNG) {
   ECP AA, BB, CC;
   ECP2 G2;
@@ -425,20 +424,15 @@ static int verifyAuxFast(ECP* A, ECP* B, ECP* C, ECP* D, ECP2* X, ECP2 *Y, csprn
   // BB = (-e1·B) + (-e2·C)
   ECP_add(&BB, &CC);
 
-  // w = e(e1·A, Y)·e((-e1·B) + (-e2·C), G2)
-  PAIR_normalized_double_ate(&w, Y, &AA, &G2, &BB);
+  // CC = e2·(A + D)
+  ECP_copy(&CC, A);
+  ECP_add(&CC, D);
+  PAIR_G1mul(&CC, e2);
+
+  // w = e(e1·A, Y)·e((-e1·B) + (-e2·C), G2)·e(e2·(A + D), X)
+  PAIR_normalized_triple_ate(&w, Y, &AA, &G2, &BB, X, &CC);
   PAIR_fexp(&w);
 
-  // AA = e2·(A + D)
-  ECP_copy(&AA, A);
-  ECP_add(&AA, D);
-  PAIR_G1mul(&AA, e2);
-
-  // y = e(e2·(A + D), X)
-  PAIR_normalized_ate(&y, X, &AA);
-  PAIR_fexp(&y);
-
-  FP12_mul(&w, &y);
   FP12_one(&y);
 
   if (!FP12_equals(&w, &y)) {

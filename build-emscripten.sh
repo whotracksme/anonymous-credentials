@@ -33,6 +33,7 @@ fi
       -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
       -DBUILD_SHARED_LIBS=OFF \
       -DAMCL_CURVE=BN254 \
+      -DWORD_SIZE=64 \
       $SCRIPTPATH/core && \
     emmake make -j $(getconf _NPROCESSORS_ONLN) VERBOSE=1)
 
