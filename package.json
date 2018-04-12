@@ -5,7 +5,7 @@
   "main": "lib/index.js",
   "scripts": {
     "test": "mocha --napi-modules --timeout 10000 tests/tests.js",
-    "install": "CC=clang CXX=clang++ ./build-native.sh && node-gyp rebuild"
+    "install": "./build-native.sh && node-gyp rebuild"
   },
   "repository": {
     "type": "git",
