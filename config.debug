@@ -1,13 +1,19 @@
-. ./config.release
-
 BUILD_TYPE=Debug
-
 DEFAULT_FLAGS="-g -fPIC"
 
 # Native compiler:
+CC=clang
+CXX=clang++
 CFLAGS="$DEFAULT_FLAGS"
 CXXFLAGS="$DEFAULT_FLAGS"
 
 # Emscripten specific:
 EMCC_FLAGS="$DEFAULT_FLAGS"
 EMCC_ASSERTIONS="1"
+
+# Sanitizer support:
+# - "off":       no instrumentation
+# - "address":   https://clang.llvm.org/docs/AddressSanitizer.html
+# - "undefined": https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html
+#
+SANITIZER_SUPPORT="off"
