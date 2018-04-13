@@ -1,3 +1,5 @@
+. ./config.common
+
 BUILD_TYPE=Debug
 DEFAULT_FLAGS="-g -fPIC"
 

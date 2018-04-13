@@ -1,3 +1,5 @@
+. ./config.common
+
 BUILD_TYPE=Release
 
 DEFAULT_FLAGS="-O3 -DNDEBUG -fPIC"

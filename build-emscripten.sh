@@ -32,9 +32,9 @@ fi
       -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
       -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
       -DBUILD_SHARED_LIBS=OFF \
-      -DAMCL_CURVE=BN254 \
+      -DAMCL_CURVE=$CURVE \
       -DWORD_SIZE=64 \
-      $SCRIPTPATH/core && \
+      $SCRIPTPATH && \
     emmake make -j $(getconf _NPROCESSORS_ONLN) VERBOSE=1)
 
 name_0="wasm"
@@ -61,12 +61,12 @@ EMFLAGS=${!EMFLAGS}
     -std=c11 -Wall -Wextra -Wno-strict-prototypes -Wunused-value -Wcast-align \
     -Wunused-variable -Wundef -Wformat-security -Wshadow \
     -o "$DISTFOLDER/group-sign-$EMNAME.js" \
-    -L$BUILDFOLDER/milagro-crypto-c/src -Wl,-rpath,$BUILDFOLDER/milagro-crypto-c/src \
+    -L$BUILDFOLDER/milagro-crypto-c/core/src -Wl,-rpath,$BUILDFOLDER/milagro-crypto-c/core/src \
     -rdynamic \
-    $BUILDFOLDER/src/libgroupsign.a \
-    $BUILDFOLDER/milagro-crypto-c/lib/libamcl_curve_BN254.a \
+    $BUILDFOLDER/core/src/libgroupsign_$CURVE.a \
+    $BUILDFOLDER/milagro-crypto-c/lib/libamcl_curve_$CURVE.a \
     $BUILDFOLDER/milagro-crypto-c/lib/libamcl_core.a \
-    $BUILDFOLDER/milagro-crypto-c/lib/libamcl_pairing_BN254.a \
+    $BUILDFOLDER/milagro-crypto-c/lib/libamcl_pairing_$CURVE.a \
     -s EXPORTED_FUNCTIONS="[\
        '_GS_seed', \
        '_GS_createState', \
