@@ -1,4 +1,4 @@
-#include "group-sign.h"
+#include "group-sign_ZZZ.h"
 #include <stdio.h>
 
 #define ECPSIZE (2*MODBYTES)
@@ -63,7 +63,7 @@ void log_state(int state)
 
 // Enforce that input is normalized before computing the pairing.
 // (behaves as PAIR_ate in Milagro 3.5.0)
-static void PAIR_normalized_ate(FP12_BN254 *r, ECP2_BN254 *P, ECP_BN254 *Q)
+static void PAIR_normalized_ate(FP12_YYY *r, ECP2_ZZZ *P, ECP_ZZZ *Q)
 {
   ECP2_affine(P);
   ECP_affine(Q);
@@ -71,7 +71,7 @@ static void PAIR_normalized_ate(FP12_BN254 *r, ECP2_BN254 *P, ECP_BN254 *Q)
   PAIR_ate(r, P, Q);
 }
 
-static void PAIR_normalized_triple_ate(FP12_BN254 *r, ECP2_BN254 *P, ECP_BN254 *Q, ECP2_BN254 *R, ECP_BN254 *S, ECP2_BN254 *T, ECP_BN254 *U)
+static void PAIR_normalized_triple_ate(FP12_YYY *r, ECP2_ZZZ *P, ECP_ZZZ *Q, ECP2_ZZZ *R, ECP_ZZZ *S, ECP2_ZZZ *T, ECP_ZZZ *U)
 {
   ECP2_affine(P);
   ECP_affine(Q);
