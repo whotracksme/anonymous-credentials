@@ -5,16 +5,94 @@
 #define ECP2SIZE (4*MODBYTES)
 #define BIGSIZE MODBYTES
 
-// debug option: logs all state transitions
-const int VERBOSE_LOGGING = 0;
 
-void message(const char* msg)
+struct GroupPublicKey {
+    ECP2 X; // G2 ** x
+    ECP2 Y; // G2 ** y
+
+    // ZK of discrete-log knowledge for X and Y
+    BIG cx;
+    BIG sx;
+    BIG cy;
+    BIG sy;
+};
+
+struct GroupPrivateKey {
+    struct GroupPublicKey pub;
+    BIG x;
+    BIG y;
+};
+
+struct JoinMessage {
+    ECP Q; // G1 ** gsk
+
+    BIG c;
+    BIG s;
+};
+
+struct UserCredentials {
+    ECP A;
+    ECP B;
+    ECP C;
+    ECP D;
+};
+
+struct UserPrivateKey {
+    struct UserCredentials cred;
+    BIG gsk;
+};
+
+struct JoinResponse {
+    struct UserCredentials cred;
+    BIG c;
+    BIG s;
+};
+
+struct Signature {
+    ECP A;
+    ECP B;
+    ECP C;
+    ECP D;
+    ECP NYM;
+
+    BIG c;
+    BIG s;
+};
+
+// "bindings" -> these are the external interface
+
+enum ReturnCodes {
+  GS_RETURN_FAILURE,
+  GS_RETURN_SUCCESS,
+  GS_RETURN_UNINITIALIZED,
+  GS_INVALID_DATA,
+};
+
+enum StateFlags {
+  GS_SEEDED,
+  GS_GROUP_PRIVKEY,
+  GS_GROUP_PUBKEY,
+  GS_STARTJOIN,
+  GS_USERCREDS,
+};
+
+typedef struct {
+  csprng _rng;
+  struct GroupPrivateKey _priv;
+  struct UserPrivateKey _userPriv;
+  int state;
+} GS_State;
+
+// debug option: logs all state transitions
+static const int VERBOSE_LOGGING = 0;
+
+static void message(const char* msg)
 {
   if(VERBOSE_LOGGING)
     printf("%s\n", msg);
 }
 
-void log_state(int state)
+static void log_state(int state)
 {
   if(VERBOSE_LOGGING)
   {
@@ -223,12 +301,12 @@ static void ECP2challenge(ECP2* Y, ECP2* G, ECP2* GR, BIG c)
 
 // perhaps could refector with templates
 // assuming message is 32 bytes long (or null pointer)
-static void ECPchallenge(Byte32 message, ECP* Y, ECP* G, ECP* GR, BIG c)
+static void ECPchallenge(char* message, int message_len, ECP* Y, ECP* G, ECP* GR, BIG c)
 {
     hash256 sha256;
     HASH256_init(&sha256);
     if (message) {
-      for (int i = 0; i < 32; ++i) {
+      for (int i = 0; i < message_len; ++i) {
         HASH256_process(&sha256, message[i]);
       }
     }
@@ -247,14 +325,14 @@ static void ECPchallenge(Byte32 message, ECP* Y, ECP* G, ECP* GR, BIG c)
 // make POK of X such that Y = G ** X
 // v is a random integer mod group order
 // output is T, r
-static void makeECPProof(csprng* RNG, ECP* G, ECP* Y, BIG x, char *message, BIG c, BIG s)
+static void makeECPProof(csprng* RNG, ECP* G, ECP* Y, BIG x, char *message, int message_len, BIG c, BIG s)
 {
     BIG r, order;
     randomModOrder(r, RNG);
     ECP GR;
     ECP_copy(&GR, G);
     PAIR_G1mul(&GR, r);
-    ECPchallenge(message, Y, G, &GR, c);
+    ECPchallenge(message, message_len, Y, G, &GR, c);
     BIG_rcopy(order, CURVE_Order);
     BIG_modmul(s, c, x, order);
     BIG_modneg(s, s, order);
@@ -262,13 +340,13 @@ static void makeECPProof(csprng* RNG, ECP* G, ECP* Y, BIG x, char *message, BIG 
     BIG_mod(s, order);
 }
 
-static void ECPchallengeEquals(Byte32 message, ECP* Y, ECP* Z, ECP* A, ECP* B, ECP* AR, ECP* BR, BIG c)
+static void ECPchallengeEquals(char* message, int message_len, ECP* Y, ECP* Z, ECP* A, ECP* B, ECP* AR, ECP* BR, BIG c)
 {
     hash256 sha256;
     HASH256_init(&sha256);
 
     if (message) {
-        for (int i = 0; i < 32; ++i) HASH256_process(&sha256, message[i]);
+        for (int i = 0; i < message_len; ++i) HASH256_process(&sha256, message[i]);
     }
 
     addECPHash(&sha256, Y);
@@ -287,7 +365,7 @@ static void ECPchallengeEquals(Byte32 message, ECP* Y, ECP* Z, ECP* A, ECP* B, E
     BIG_norm(c); // Needed?
 }
 
-static void makeECPProofEquals(csprng* RNG, ECP* A, ECP* B, ECP* Y, ECP* Z, BIG x, Byte32 message, BIG c, BIG s)
+static void makeECPProofEquals(csprng* RNG, ECP* A, ECP* B, ECP* Y, ECP* Z, BIG x, char* message, int message_len, BIG c, BIG s)
 {
     BIG r, order;
     randomModOrder(r, RNG);
@@ -296,7 +374,7 @@ static void makeECPProofEquals(csprng* RNG, ECP* A, ECP* B, ECP* Y, ECP* Z, BIG 
     ECP_copy(&BR, B);
     PAIR_G1mul(&AR, r);
     PAIR_G1mul(&BR, r);
-    ECPchallengeEquals(message, Y, Z, A, B, &AR, &BR, c);
+    ECPchallengeEquals(message, message_len, Y, Z, A, B, &AR, &BR, c);
     BIG_rcopy(order, CURVE_Order);
     BIG_modmul(s, c, x, order);
     BIG_modneg(s, s, order);
@@ -306,7 +384,7 @@ static void makeECPProofEquals(csprng* RNG, ECP* A, ECP* B, ECP* Y, ECP* Z, BIG 
 
 // POK of X such that Y = G ** X
 // verify that T = (G ** R) * (Y ** C), C = H(G, Y, T)
-static int verifyECPProof(ECP* G, ECP* Y, Byte32 message, BIG c, BIG s)
+static int verifyECPProof(ECP* G, ECP* Y, char* message, int message_len, BIG c, BIG s)
 {
     ECP GS, YC;
     ECP_copy(&GS, G);
@@ -315,11 +393,11 @@ static int verifyECPProof(ECP* G, ECP* Y, Byte32 message, BIG c, BIG s)
     PAIR_G1mul(&YC, c);
     ECP_add(&GS, &YC);
     BIG cc;
-    ECPchallenge(message, Y, G, &GS, cc);
+    ECPchallenge(message, message_len, Y, G, &GS, cc);
     return BIG_comp(c, cc) == 0;
 }
 
-static int verifyECPProofEquals(ECP* A, ECP* B, ECP* Y, ECP* Z, Byte32 message, BIG c, BIG s)
+static int verifyECPProofEquals(ECP* A, ECP* B, ECP* Y, ECP* Z, char* message, int message_len, BIG c, BIG s)
 {
     ECP AS, YC, BS, ZC;
     ECP_copy(&AS, A);
@@ -333,7 +411,7 @@ static int verifyECPProofEquals(ECP* A, ECP* B, ECP* Y, ECP* Z, Byte32 message, 
     ECP_add(&AS, &YC);
     ECP_add(&BS, &ZC);
     BIG cc;
-    ECPchallengeEquals(message, Y, Z, A, B, &AS, &BS, cc);
+    ECPchallengeEquals(message, message_len, Y, Z, A, B, &AS, &BS, cc);
     return BIG_comp(c, cc) == 0;
 }
 
@@ -478,7 +556,7 @@ static int verifyAux(ECP* A, ECP* B, ECP* C, ECP* D, ECP2* X, ECP2 *Y)
     return 1;
 }
 
-int serialize_group_public_key(struct GroupPublicKey* in, octet* out)
+static int serialize_group_public_key(struct GroupPublicKey* in, octet* out)
 {
   return
   serialize_ECP2(&in->X, out) &&
@@ -489,7 +567,16 @@ int serialize_group_public_key(struct GroupPublicKey* in, octet* out)
   serialize_BIG(&in->sy, out);
 }
 
-int deserialize_group_public_key(octet* in, struct GroupPublicKey* out)
+static int verifyGroupPublicKey(struct GroupPublicKey *pub)
+{
+    ECP2 W;
+    setG2(&W);
+
+    return verifyECP2Proof(&W, &pub->X, pub->cx, pub->sx)
+        && verifyECP2Proof(&W, &pub->Y, pub->cy, pub->sy);
+}
+
+static int deserialize_group_public_key(octet* in, struct GroupPublicKey* out)
 {
   return
   deserialize_ECP2(in, &out->X) &&
@@ -501,12 +588,13 @@ int deserialize_group_public_key(octet* in, struct GroupPublicKey* out)
   verifyGroupPublicKey(out); // TODO: should this be done here?
 }
 
-int serialize_group_private_key(struct GroupPrivateKey* in, octet* out)
+static int serialize_group_private_key(struct GroupPrivateKey* in, octet* out)
 {
   return serialize_group_public_key(&in->pub, out) &&
   serialize_BIG(&in->x, out) &&
   serialize_BIG(&in->y, out);
 }
+
 static int _checkPrivateKey(struct GroupPrivateKey* key)
 {
   ECP2 X, Y;
@@ -516,7 +604,8 @@ static int _checkPrivateKey(struct GroupPrivateKey* key)
   PAIR_G2mul(&Y, key->y);
   return ECP2_equals(&X, &key->pub.X) && ECP2_equals(&Y, &key->pub.Y);
 }
-int deserialize_group_private_key(octet* in, struct GroupPrivateKey* out)
+
+static int deserialize_group_private_key(octet* in, struct GroupPrivateKey* out)
 {
   return deserialize_group_public_key(in, &out->pub) &&
   deserialize_BIG(in, &out->x) &&
@@ -524,7 +613,7 @@ int deserialize_group_private_key(octet* in, struct GroupPrivateKey* out)
   _checkPrivateKey(out); // TODO: should this be done here?
 }
 
-int serialize_join_message(struct JoinMessage* in, octet* out)
+static int serialize_join_message(struct JoinMessage* in, octet* out)
 {
   return
   serialize_ECP(&in->Q, out) &&
@@ -532,7 +621,7 @@ int serialize_join_message(struct JoinMessage* in, octet* out)
   serialize_BIG(&in->s, out);
 }
 
-int deserialize_join_message(octet* in, struct JoinMessage* out)
+static int deserialize_join_message(octet* in, struct JoinMessage* out)
 {
   return
   deserialize_ECP(in, &out->Q) &&
@@ -540,7 +629,7 @@ int deserialize_join_message(octet* in, struct JoinMessage* out)
   deserialize_BIG(in, &out->s);
 }
 
-int serialize_user_credentials(struct UserCredentials* in, octet* out)
+static int serialize_user_credentials(struct UserCredentials* in, octet* out)
 {
   return
   serialize_ECP(&in->A, out) &&
@@ -549,7 +638,7 @@ int serialize_user_credentials(struct UserCredentials* in, octet* out)
   serialize_ECP(&in->D, out);
 }
 
-int deserialize_user_credentials(octet* in, struct UserCredentials* out)
+static int deserialize_user_credentials(octet* in, struct UserCredentials* out)
 {
   return
   deserialize_ECP(in, &out->A) &&
@@ -558,7 +647,7 @@ int deserialize_user_credentials(octet* in, struct UserCredentials* out)
   deserialize_ECP(in, &out->D);
 }
 
-int serialize_join_response(struct JoinResponse* in, octet* out)
+static int serialize_join_response(struct JoinResponse* in, octet* out)
 {
   return
   serialize_user_credentials(&in->cred, out) &&
@@ -566,7 +655,7 @@ int serialize_join_response(struct JoinResponse* in, octet* out)
   serialize_BIG(&in->s, out);
 }
 
-int deserialize_join_response(octet* in, struct JoinResponse* out)
+static int deserialize_join_response(octet* in, struct JoinResponse* out)
 {
   return
   deserialize_user_credentials(in, &out->cred) &&
@@ -574,21 +663,21 @@ int deserialize_join_response(octet* in, struct JoinResponse* out)
   deserialize_BIG(in, &out->s);
 }
 
-int serialize_user_private_key(struct UserPrivateKey* in, octet* out)
+static int serialize_user_private_key(struct UserPrivateKey* in, octet* out)
 {
   return
   serialize_user_credentials(&in->cred, out) &&
   serialize_BIG(&in->gsk, out);
 }
 
-int deserialize_user_private_key(octet* in, struct UserPrivateKey* out)
+static int deserialize_user_private_key(octet* in, struct UserPrivateKey* out)
 {
   return
   deserialize_user_credentials(in, &out->cred) &&
   deserialize_BIG(in, &out->gsk);
 }
 
-int serialize_signature(struct Signature* in, octet* out)
+static int serialize_signature(struct Signature* in, octet* out)
 {
   return
   serialize_ECP(&in->A, out) &&
@@ -600,7 +689,7 @@ int serialize_signature(struct Signature* in, octet* out)
   serialize_BIG(&in->s, out);
 }
 
-int deserialize_signature(octet* in, struct Signature* out)
+static int deserialize_signature(octet* in, struct Signature* out)
 {
   return
   deserialize_ECP(in, &out->A) &&
@@ -612,14 +701,14 @@ int deserialize_signature(octet* in, struct Signature* out)
   deserialize_BIG(in, &out->s);
 }
 
-int serialize_signature_tag(struct Signature* in, octet* out)
+static int serialize_signature_tag(struct Signature* in, octet* out)
 {
   return
   serialize_ECP(&in->NYM, out);
 }
 
 // n is a challenge for the user, 32 bytes
-void join_client(csprng *RNG, Byte32 n, struct JoinMessage *j, struct UserPrivateKey *priv)
+static void join_client(csprng *RNG, char* challenge, int challenge_len, struct JoinMessage *j, struct UserPrivateKey *priv)
     // BIG gsk, ECP* Q, ECP* T, BIG rr) // output
 {
   message("join_client");
@@ -632,19 +721,19 @@ void join_client(csprng *RNG, Byte32 n, struct JoinMessage *j, struct UserPrivat
 
     // ECP_copy(&priv->Q, &j->Q);
 
-    makeECPProof(RNG, &G, &j->Q, priv->gsk, n, j->c, j->s);
+    makeECPProof(RNG, &G, &j->Q, priv->gsk, challenge, challenge_len, j->c, j->s);
 
   message("join_client: done");
 }
 
-int join_server(csprng *RNG, struct GroupPrivateKey *priv, struct JoinMessage *j, Byte32 challenge, struct JoinResponse *resp)
+static int join_server(csprng *RNG, struct GroupPrivateKey *priv, struct JoinMessage *j, char* challenge, int challenge_len, struct JoinResponse *resp)
 {
     BIG order;
     BIG_rcopy(order, CURVE_Order);
 
     ECP G;
     setG1(&G);
-    int ok = verifyECPProof(&G, &j->Q, challenge, j->c, j->s);
+    int ok = verifyECPProof(&G, &j->Q, challenge, challenge_len, j->c, j->s);
     if (ok) {
         ECP *A = &resp->cred.A;
         ECP *B = &resp->cred.B;
@@ -669,12 +758,12 @@ int join_server(csprng *RNG, struct GroupPrivateKey *priv, struct JoinMessage *j
         ECP_add(C, D);
         PAIR_G1mul(C, priv->x);
 
-        makeECPProofEquals(RNG, &G, Q, B, D, tmp, 0, resp->c, resp->s);
+        makeECPProofEquals(RNG, &G, Q, B, D, tmp, 0, 0, resp->c, resp->s);
     }
     return ok;
 }
 
-int setup(csprng *RNG, struct GroupPrivateKey *priv)
+static int setup(csprng *RNG, struct GroupPrivateKey *priv)
 {
     ECP2 W;
     setG2(&W);
@@ -696,16 +785,7 @@ int setup(csprng *RNG, struct GroupPrivateKey *priv)
     return 0;
 }
 
-int verifyGroupPublicKey(struct GroupPublicKey *pub)
-{
-    ECP2 W;
-    setG2(&W);
-
-    return verifyECP2Proof(&W, &pub->X, pub->cx, pub->sx)
-        && verifyECP2Proof(&W, &pub->Y, pub->cy, pub->sy);
-}
-
-int join_finish_client(struct GroupPublicKey *pub, struct UserPrivateKey *priv, struct JoinResponse *resp)
+static int join_finish_client(struct GroupPublicKey *pub, struct UserPrivateKey *priv, struct JoinResponse *resp)
 {
     ECP G, Q;
     setG1(&G);
@@ -713,7 +793,7 @@ int join_finish_client(struct GroupPublicKey *pub, struct UserPrivateKey *priv, 
     ECP_copy(&Q, &G);
     PAIR_G1mul(&Q, priv->gsk);
 
-    if (!verifyECPProofEquals(&G, &Q, &resp->cred.B, &resp->cred.D, 0, resp->c, resp->s)) {
+    if (!verifyECPProofEquals(&G, &Q, &resp->cred.B, &resp->cred.D, 0, 0, resp->c, resp->s)) {
         return 0;
     }
 
@@ -729,8 +809,7 @@ int join_finish_client(struct GroupPublicKey *pub, struct UserPrivateKey *priv, 
     return 1;
 }
 
-// msg and octet len should be 32 bytes!!! Assuming sha256 is performed on original input.
-void sign(csprng *RNG, struct UserPrivateKey *priv, Byte32 msg, Byte32 bsn, struct Signature *sig)
+static void sign(csprng *RNG, struct UserPrivateKey *priv, char* msg, int msg_len, char* bsn, int bsn_len, struct Signature *sig)
 {
     ECP_copy(&sig->A, &priv->cred.A);
     ECP_copy(&sig->B, &priv->cred.B);
@@ -752,16 +831,16 @@ void sign(csprng *RNG, struct UserPrivateKey *priv, Byte32 msg, Byte32 bsn, stru
     PAIR_G1mul(&sig->NYM, priv->gsk);
 
     // Compute sha256(msg || bsn) to be used in proof of equality
-    Byte32 hh_msg_bsn;
+    char hh_msg_bsn[32];
     hash256 h_msg_bsn;
     HASH256_init(&h_msg_bsn);
-    for (int i=0; i < 32; ++i) HASH256_process(&h_msg_bsn, msg[i]);
-    for (int i=0; i < 32; ++i) HASH256_process(&h_msg_bsn, bsn[i]);
+    for (int i=0; i < msg_len; ++i) HASH256_process(&h_msg_bsn, msg[i]);
+    for (int i=0; i < bsn_len; ++i) HASH256_process(&h_msg_bsn, bsn[i]);
     HASH256_hash(&h_msg_bsn, hh_msg_bsn);
-    makeECPProofEquals(RNG, &sig->B, &BSN, &sig->D, &sig->NYM, priv->gsk, hh_msg_bsn, sig->c, sig->s);
+    makeECPProofEquals(RNG, &sig->B, &BSN, &sig->D, &sig->NYM, priv->gsk, hh_msg_bsn, 32, sig->c, sig->s);
 }
 
-int verify(char *msg, char *bsn, struct Signature *sig, struct GroupPublicKey *pub, csprng *RNG)
+static int verify(char *msg, int msg_len, char *bsn, int bsn_len, struct Signature *sig, struct GroupPublicKey *pub, csprng *RNG)
 {
     // Map basename to point in G1 (bsn should be 32 bytes and result of crypto hash like sha256)
     ECP BSN;
@@ -771,11 +850,11 @@ int verify(char *msg, char *bsn, struct Signature *sig, struct GroupPublicKey *p
     char hh_msg_bsn[32];
     hash256 h_msg_bsn;
     HASH256_init(&h_msg_bsn);
-    for (int i=0; i < 32; ++i) HASH256_process(&h_msg_bsn, msg[i]);
-    for (int i=0; i < 32; ++i) HASH256_process(&h_msg_bsn, bsn[i]);
+    for (int i=0; i < msg_len; ++i) HASH256_process(&h_msg_bsn, msg[i]);
+    for (int i=0; i <  bsn_len; ++i) HASH256_process(&h_msg_bsn, bsn[i]);
     HASH256_hash(&h_msg_bsn, hh_msg_bsn);
 
-    return verifyECPProofEquals(&sig->B, &BSN, &sig->D, &sig->NYM, hh_msg_bsn, sig->c, sig->s)
+    return verifyECPProofEquals(&sig->B, &BSN, &sig->D, &sig->NYM, hh_msg_bsn, 32, sig->c, sig->s)
      && !ECP_isinf(&sig->A) && !ECP_isinf(&sig->B)
      && verifyAuxFast(&sig->A, &sig->B, &sig->C, &sig->D, &pub->X, &pub->Y, RNG);
 }
@@ -846,7 +925,7 @@ int GS_loadGroupPubKey(void* rawstate, char* data, int len) {
   return GS_RETURN_SUCCESS;
 }
 
-int GS_startJoin(void* rawstate, Byte32 challenge, char* joinmsg, int* len) {
+int GS_startJoin(void* rawstate, char* challenge, int challenge_len, char* joinmsg, int* len) {
   message("GS_startJoin called");
 
   GS_State* state = (GS_State*)rawstate;
@@ -859,7 +938,7 @@ int GS_startJoin(void* rawstate, Byte32 challenge, char* joinmsg, int* len) {
   log_state(state->state);
 
   struct JoinMessage j;
-  join_client(&state->_rng, challenge, &j, &state->_userPriv);
+  join_client(&state->_rng, challenge, challenge_len, &j, &state->_userPriv);
   octet o = {0, *len, joinmsg};
   if (!serialize_join_message(&j, &o)) {
     message("GS_startJoin: GS_INVALID_DATA");
@@ -876,7 +955,8 @@ int GS_startJoin(void* rawstate, Byte32 challenge, char* joinmsg, int* len) {
 
 int GS_startJoinStatic(
   void* rawstate,
-  Byte32 challenge, // in
+  char* challenge, // in
+  int challenge_len, // in
   char* gsk, int* len_gsk, // out
   char* joinmsg, int* len // out
 ) {
@@ -890,7 +970,7 @@ int GS_startJoinStatic(
 
   struct JoinMessage j;
   struct UserPrivateKey userPriv;
-  join_client(&state->_rng, challenge, &j, &userPriv);
+  join_client(&state->_rng, challenge, challenge_len, &j, &userPriv);
   octet o = {0, *len, joinmsg};
   if (!serialize_join_message(&j, &o)) {
     message("GS_startJoinStatic: GS_INVALID_DATA");
@@ -1021,7 +1101,7 @@ int GS_exportUserPrivKey(void* rawstate, char* out, int* out_len) {
   return GS_RETURN_SUCCESS;
 }
 
-int GS_processJoin(void* rawstate, char* joinmsg, int joinmsg_len, Byte32 challenge, char* out, int* out_len) {
+int GS_processJoin(void* rawstate, char* joinmsg, int joinmsg_len, char* challenge, int challenge_len, char* out, int* out_len) {
   GS_State* state = (GS_State*)rawstate;
   if (!((1 << GS_GROUP_PRIVKEY)&state->state)) {
     message("GS_GROUP_PRIVKEY not set");
@@ -1038,7 +1118,7 @@ int GS_processJoin(void* rawstate, char* joinmsg, int joinmsg_len, Byte32 challe
   octet oo = {0, *out_len, out};
   if (
     !deserialize_join_message(&o, &join) ||
-    !join_server(&state->_rng, &state->_priv, &join, challenge, &resp) ||
+    !join_server(&state->_rng, &state->_priv, &join, challenge, challenge_len, &resp) ||
     !serialize_join_response(&resp, &oo)
   ) {
     return GS_INVALID_DATA;
@@ -1048,13 +1128,13 @@ int GS_processJoin(void* rawstate, char* joinmsg, int joinmsg_len, Byte32 challe
   return GS_RETURN_SUCCESS;
 }
 
-int GS_sign(void* rawstate, Byte32 msg, Byte32 bsn, char* signature, int* len) {
+int GS_sign(void* rawstate, char* msg, int msg_len, char* bsn, int bsn_len, char* signature, int* len) {
   GS_State* state = (GS_State*)rawstate;
   if (!((1 << GS_USERCREDS)&state->state) || !((1 << GS_SEEDED)&state->state)) {
     return GS_RETURN_UNINITIALIZED;
   }
   struct Signature sig;
-  sign(&state->_rng, &state->_userPriv, msg, bsn, &sig);
+  sign(&state->_rng, &state->_userPriv, msg, msg_len, bsn, bsn_len, &sig);
   octet o = {0, *len, signature};
   if (!serialize_signature(&sig, &o)) {
     return GS_INVALID_DATA;
@@ -1063,7 +1143,7 @@ int GS_sign(void* rawstate, Byte32 msg, Byte32 bsn, char* signature, int* len) {
   return GS_RETURN_SUCCESS;
 }
 
-int GS_verify(void* rawstate, Byte32 msg, Byte32 bsn, char* signature, int len) {
+int GS_verify(void* rawstate, char* msg, int msg_len, char* bsn, int bsn_len, char* signature, int len) {
   GS_State* state = (GS_State*)rawstate;
   if (!((1 << GS_GROUP_PUBKEY)&state->state)) {
     return GS_RETURN_UNINITIALIZED;
@@ -1073,7 +1153,7 @@ int GS_verify(void* rawstate, Byte32 msg, Byte32 bsn, char* signature, int len) 
   if (!deserialize_signature(&o, &sig)) {
     return GS_INVALID_DATA;
   }
-  if (!verify(msg, bsn, &sig, &state->_priv.pub, &state->_rng)) {
+  if (!verify(msg, msg_len, bsn, bsn_len, &sig, &state->_priv.pub, &state->_rng)) {
     return GS_RETURN_FAILURE;
   }
   return GS_RETURN_SUCCESS;

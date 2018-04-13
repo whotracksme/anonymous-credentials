@@ -83,9 +83,7 @@ GroupSignManager.prototype._makeBindings = function() {
 
           var ptr = _arrayToPtr(args[i], self._getBuffer());
           funcArgs.push(ptr);
-          if (!size) {
-            funcArgs.push(args[i].length);
-          }
+          funcArgs.push(args[i].length);
         });
         if (output === 'array') {
           var ptr = self._getBuffer();

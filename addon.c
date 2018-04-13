@@ -2,8 +2,6 @@
 #include <assert.h>
 #include <stdlib.h>
 
-typedef char Byte32[32];
-
 extern void* GS_createState();
 extern void GS_destroyState(void* state);
 
@@ -11,19 +9,20 @@ extern int GS_seed(void* state, char* seed, int seed_length);
 extern int GS_setupGroup(void* state);
 extern int GS_loadGroupPrivKey(void* state, char* data, int len);
 extern int GS_loadGroupPubKey(void* state, char* data, int len);
-extern int GS_startJoin(void* state, Byte32 challenge, char* joinmsg, int* len);
+extern int GS_startJoin(void* state, char* challenge, int challenge_len, char* joinmsg, int* len);
 extern int GS_finishJoin(void* state, char* joinresponse, int len);
 extern int GS_loadUserPrivKey(void* state, char* in, int in_len);
 extern int GS_exportGroupPrivKey(void* state, char* out, int* out_len);
 extern int GS_exportGroupPubKey(void* state, char* out, int* out_len);
 extern int GS_exportUserPrivKey(void* state, char* out, int* out_len);
-extern int GS_processJoin(void* state, char* joinmsg, int joinmsg_len, Byte32 challenge, char* out, int* out_len);
-extern int GS_sign(void* state, Byte32 msg, Byte32 bsn, char* signature, int* len);
-extern int GS_verify(void* state, Byte32 msg, Byte32 bsn, char* signature, int len);
+extern int GS_processJoin(void* state, char* joinmsg, int joinmsg_len, char* challenge, int challenge_len, char* out, int* out_len);
+extern int GS_sign(void* state, char* msg, int msg_len, char* bsn, int bsn_len, char* signature, int* len);
+extern int GS_verify(void* state, char* msg, int msg_len, char* bsn, int bsn_len, char* signature, int len);
 extern int GS_getSignatureTag(char* signature, int sig_len, char* tag, int* tag_len);
 extern int GS_startJoinStatic(
   void* state,
-  Byte32 challenge, // in
+  char* challenge, // in
+  int challenge_len, // in
   char* gsk, int* len_gsk, // out
   char* joinmsg, int* len // out
 );
@@ -257,7 +256,7 @@ napi_value StartJoin(napi_env env, napi_callback_info info) {
 
   char buf[1024];
   int out_len = sizeof(buf);
-  GS_CALL(GS_startJoin(obj->state, data, buf, &out_len));
+  GS_CALL(GS_startJoin(obj->state, data, len, buf, &out_len));
 
   napi_value out_buf;
   NAPI_CALL(napi_create_buffer_copy(
@@ -285,7 +284,7 @@ napi_value ProcessJoin(napi_env env, napi_callback_info info) {
 
   char buf[1024];
   int out_len = sizeof(buf);
-  GS_CALL(GS_processJoin(obj->state, join, len_join, challenge, buf, &out_len));
+  GS_CALL(GS_processJoin(obj->state, join, len_join, challenge, len_challenge, buf, &out_len));
 
   napi_value out_buf;
   NAPI_CALL(napi_create_buffer_copy(
@@ -332,7 +331,7 @@ napi_value Sign(napi_env env, napi_callback_info info) {
 
   char buf[1024];
   int out_len = sizeof(buf);
-  GS_CALL(GS_sign(obj->state, msg, bsn, buf, &out_len));
+  GS_CALL(GS_sign(obj->state, msg, len_msg, bsn, len_bsn, buf, &out_len));
 
   napi_value out_buf;
   NAPI_CALL(napi_create_buffer_copy(
@@ -365,7 +364,7 @@ napi_value Verify(napi_env env, napi_callback_info info) {
   size_t len_sig;
   char* sig = getData(env, args[2], &len_sig);
 
-  return getBoolean(env, GS_verify(obj->state, msg, bsn, sig, len_sig) == 1);
+  return getBoolean(env, GS_verify(obj->state, msg, len_msg, bsn, len_bsn, sig, len_sig) == 1);
 }
 
 napi_value GetSignatureTag(napi_env env, napi_callback_info info) {
@@ -440,7 +439,7 @@ napi_value StartJoinStatic(napi_env env, napi_callback_info info) {
 
   char buf[1024];
   int out_len = sizeof(buf);
-  GS_CALL(GS_startJoinStatic(obj->state, data, bufgsk, &outgsk_len, buf, &out_len));
+  GS_CALL(GS_startJoinStatic(obj->state, data, len, bufgsk, &outgsk_len, buf, &out_len));
 
   napi_value outgsk_buf;
   napi_value out_buf;
