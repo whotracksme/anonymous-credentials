@@ -3,15 +3,12 @@
 set -e
 set -x
 
-CC=clang
-CXX=clang++
-
 SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
 BUILDFOLDER="$SCRIPTPATH/_build/nativebuild"
 
 if [ -z "$BUILD_TYPE" ]
 then
-  . ./config.release
+  . ./config.default
 fi
 
 rm -rf $BUILDFOLDER && \

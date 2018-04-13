@@ -1,0 +1,2 @@
+. ./config.debug
+SANITIZER_SUPPORT="address"

@@ -1,0 +1,7 @@
+. ./config.debug
+SANITIZER_SUPPORT="undefined"
+
+# On Linux, sanitizer and 128 bit integers do not work well on clang:
+# https://bugs.llvm.org/show_bug.cgi?id=16404
+CC=gcc
+CXX=g++

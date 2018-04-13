@@ -1,0 +1,2 @@
+# By default, create a stanard release build
+. ./config.release
