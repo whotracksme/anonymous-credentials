@@ -1,2 +1,2 @@
-# By default, create a stanard release build
+# By default, create a standard release build
 . ./config.release
