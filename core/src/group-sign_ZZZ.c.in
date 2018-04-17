@@ -5,6 +5,13 @@
 #define ECP2SIZE (4*MODBYTES)
 #define BIGSIZE MODBYTES
 
+// Output must be at least MODBYTES
+void myhash(char *data, int len, char *output)
+{
+  octet msg = {len, len, data};
+  octet out = {0, MODBYTES, output};
+  mhashit(HASH_TYPE, -1, &msg, &out);
+}
 
 struct GroupPublicKey {
     ECP2 X; // G2 ** x
@@ -236,7 +243,7 @@ static int deserialize_ECP(octet* in, ECP* out)
 
 static void mapit(char *h, ECP *P)
 {
-    octet o = {32, 32, h};
+    octet o = {MODBYTES, MODBYTES, h};
     ECP_mapit(P, &o);
 }
 
@@ -265,57 +272,44 @@ static void randomModOrder(BIG x, csprng *RNG)
     BIG_randomnum(x, order, RNG);
 }
 
-static void addECP2Hash(hash256* h, ECP2* P)
-{
-    char tmp[ECP2SIZE];
-    octet TMP = {0, sizeof(tmp), tmp};
-    ECP2_toOctet(&TMP, P);
-    for (int i=0; i<ECP2SIZE; i++) HASH256_process(h,TMP.val[i]);
-}
-
-static void addECPHash(hash256* h, ECP* P)
-{
-    char tmp[ECPSIZE];
-    octet TMP = {0, ECPSIZE, tmp};
-    serialize_ECP(P, &TMP);
-    for (int i=0; i<ECPSIZE; i++) HASH256_process(h,TMP.val[i]);
-}
-
 static void ECP2challenge(ECP2* Y, ECP2* G, ECP2* GR, BIG c)
 {
-    hash256 sha256;
-    HASH256_init(&sha256);
+    char hh[MODBYTES];
+    char tmp[3 * ECP2SIZE];
+    octet TMP = {0, sizeof(tmp), tmp};
 
-    addECP2Hash(&sha256, Y);
-    addECP2Hash(&sha256, G);
-    addECP2Hash(&sha256, GR);
+    serialize_ECP2(Y, &TMP);
+    serialize_ECP2(G, &TMP);
+    serialize_ECP2(GR, &TMP);
+    myhash(tmp, TMP.len, hh);
 
-    char hh[32];
-    HASH256_hash(&sha256, hh);
-    BIG_fromBytesLen(c, hh, 32);
+    BIG_fromBytes(c, hh);
     BIG order;
     BIG_rcopy(order, CURVE_Order);
     BIG_mod(c, order);
     BIG_norm(c); // Needed?
 }
 
-// perhaps could refector with templates
-// assuming message is 32 bytes long (or null pointer)
-static void ECPchallenge(char* message, int message_len, ECP* Y, ECP* G, ECP* GR, BIG c)
+// message is either NULL or has length MODBYTES
+// If !message c = H(Y|G|GR)
+// If message c = H(m|Y|G|GR)
+static void ECPchallenge(char* message, ECP* Y, ECP* G, ECP* GR, BIG c)
 {
-    hash256 sha256;
-    HASH256_init(&sha256);
+    char hh[MODBYTES];
+    char tmp[MODBYTES + 3 * ECPSIZE];
+    octet TMP = {0, sizeof(tmp), tmp};
     if (message) {
-      for (int i = 0; i < message_len; ++i) {
-        HASH256_process(&sha256, message[i]);
-      }
+        for (int i = 0; i < MODBYTES; ++i) {
+            tmp[i] = message[i];
+        }
+        TMP.len = MODBYTES;
     }
-    addECPHash(&sha256, Y);
-    addECPHash(&sha256, G);
-    addECPHash(&sha256, GR);
-    char hh[32];
-    HASH256_hash(&sha256, hh);
-    BIG_fromBytesLen(c, hh, 32);
+    serialize_ECP(Y, &TMP);
+    serialize_ECP(G, &TMP);
+    serialize_ECP(GR, &TMP);
+    myhash(tmp, TMP.len, hh);
+
+    BIG_fromBytes(c, hh);
     BIG order;
     BIG_rcopy(order, CURVE_Order);
     BIG_mod(c, order);
@@ -325,14 +319,14 @@ static void ECPchallenge(char* message, int message_len, ECP* Y, ECP* G, ECP* GR
 // make POK of X such that Y = G ** X
 // v is a random integer mod group order
 // output is T, r
-static void makeECPProof(csprng* RNG, ECP* G, ECP* Y, BIG x, char *message, int message_len, BIG c, BIG s)
+static void makeECPProof(csprng* RNG, ECP* G, ECP* Y, BIG x, char *message, BIG c, BIG s)
 {
     BIG r, order;
     randomModOrder(r, RNG);
     ECP GR;
     ECP_copy(&GR, G);
     PAIR_G1mul(&GR, r);
-    ECPchallenge(message, message_len, Y, G, &GR, c);
+    ECPchallenge(message, Y, G, &GR, c);
     BIG_rcopy(order, CURVE_Order);
     BIG_modmul(s, c, x, order);
     BIG_modneg(s, s, order);
@@ -340,32 +334,33 @@ static void makeECPProof(csprng* RNG, ECP* G, ECP* Y, BIG x, char *message, int 
     BIG_mod(s, order);
 }
 
-static void ECPchallengeEquals(char* message, int message_len, ECP* Y, ECP* Z, ECP* A, ECP* B, ECP* AR, ECP* BR, BIG c)
+static void ECPchallengeEquals(char* message, ECP* Y, ECP* Z, ECP* A, ECP* B, ECP* AR, ECP* BR, BIG c)
 {
-    hash256 sha256;
-    HASH256_init(&sha256);
-
+    char hh[MODBYTES];
+    char tmp[MODBYTES + 6 * ECPSIZE];
+    octet TMP = {0, sizeof(tmp), tmp};
     if (message) {
-        for (int i = 0; i < message_len; ++i) HASH256_process(&sha256, message[i]);
+        for (int i = 0; i < MODBYTES; ++i) {
+            tmp[i] = message[i];
+        }
+        TMP.len = MODBYTES;
     }
+    serialize_ECP(Y, &TMP);
+    serialize_ECP(Z, &TMP);
+    serialize_ECP(A, &TMP);
+    serialize_ECP(B, &TMP);
+    serialize_ECP(AR, &TMP);
+    serialize_ECP(BR, &TMP);
+    myhash(tmp, TMP.len, hh);
 
-    addECPHash(&sha256, Y);
-    addECPHash(&sha256, Z);
-    addECPHash(&sha256, A);
-    addECPHash(&sha256, B);
-    addECPHash(&sha256, AR);
-    addECPHash(&sha256, BR);
-
-    char hh[32];
-    HASH256_hash(&sha256, hh);
-    BIG_fromBytesLen(c, hh, 32);
+    BIG_fromBytes(c, hh);
     BIG order;
     BIG_rcopy(order, CURVE_Order);
     BIG_mod(c, order);
     BIG_norm(c); // Needed?
 }
 
-static void makeECPProofEquals(csprng* RNG, ECP* A, ECP* B, ECP* Y, ECP* Z, BIG x, char* message, int message_len, BIG c, BIG s)
+static void makeECPProofEquals(csprng* RNG, ECP* A, ECP* B, ECP* Y, ECP* Z, BIG x, char* message, BIG c, BIG s)
 {
     BIG r, order;
     randomModOrder(r, RNG);
@@ -374,7 +369,7 @@ static void makeECPProofEquals(csprng* RNG, ECP* A, ECP* B, ECP* Y, ECP* Z, BIG 
     ECP_copy(&BR, B);
     PAIR_G1mul(&AR, r);
     PAIR_G1mul(&BR, r);
-    ECPchallengeEquals(message, message_len, Y, Z, A, B, &AR, &BR, c);
+    ECPchallengeEquals(message, Y, Z, A, B, &AR, &BR, c);
     BIG_rcopy(order, CURVE_Order);
     BIG_modmul(s, c, x, order);
     BIG_modneg(s, s, order);
@@ -384,7 +379,7 @@ static void makeECPProofEquals(csprng* RNG, ECP* A, ECP* B, ECP* Y, ECP* Z, BIG 
 
 // POK of X such that Y = G ** X
 // verify that T = (G ** R) * (Y ** C), C = H(G, Y, T)
-static int verifyECPProof(ECP* G, ECP* Y, char* message, int message_len, BIG c, BIG s)
+static int verifyECPProof(ECP* G, ECP* Y, char* message, BIG c, BIG s)
 {
     ECP GS, YC;
     ECP_copy(&GS, G);
@@ -393,11 +388,11 @@ static int verifyECPProof(ECP* G, ECP* Y, char* message, int message_len, BIG c,
     PAIR_G1mul(&YC, c);
     ECP_add(&GS, &YC);
     BIG cc;
-    ECPchallenge(message, message_len, Y, G, &GS, cc);
+    ECPchallenge(message, Y, G, &GS, cc);
     return BIG_comp(c, cc) == 0;
 }
 
-static int verifyECPProofEquals(ECP* A, ECP* B, ECP* Y, ECP* Z, char* message, int message_len, BIG c, BIG s)
+static int verifyECPProofEquals(ECP* A, ECP* B, ECP* Y, ECP* Z, char* message, BIG c, BIG s)
 {
     ECP AS, YC, BS, ZC;
     ECP_copy(&AS, A);
@@ -411,7 +406,7 @@ static int verifyECPProofEquals(ECP* A, ECP* B, ECP* Y, ECP* Z, char* message, i
     ECP_add(&AS, &YC);
     ECP_add(&BS, &ZC);
     BIG cc;
-    ECPchallengeEquals(message, message_len, Y, Z, A, B, &AS, &BS, cc);
+    ECPchallengeEquals(message, Y, Z, A, B, &AS, &BS, cc);
     return BIG_comp(c, cc) == 0;
 }
 
@@ -707,7 +702,6 @@ static int serialize_signature_tag(struct Signature* in, octet* out)
   serialize_ECP(&in->NYM, out);
 }
 
-// n is a challenge for the user, 32 bytes
 static void join_client(csprng *RNG, char* challenge, int challenge_len, struct JoinMessage *j, struct UserPrivateKey *priv)
     // BIG gsk, ECP* Q, ECP* T, BIG rr) // output
 {
@@ -719,9 +713,9 @@ static void join_client(csprng *RNG, char* challenge, int challenge_len, struct 
     randomModOrder(priv->gsk, RNG);
     PAIR_G1mul(&j->Q, priv->gsk);
 
-    // ECP_copy(&priv->Q, &j->Q);
-
-    makeECPProof(RNG, &G, &j->Q, priv->gsk, challenge, challenge_len, j->c, j->s);
+    char h[MODBYTES];
+    myhash(challenge, challenge_len, h);
+    makeECPProof(RNG, &G, &j->Q, priv->gsk, h, j->c, j->s);
 
   message("join_client: done");
 }
@@ -733,7 +727,11 @@ static int join_server(csprng *RNG, struct GroupPrivateKey *priv, struct JoinMes
 
     ECP G;
     setG1(&G);
-    int ok = verifyECPProof(&G, &j->Q, challenge, challenge_len, j->c, j->s);
+
+    char h[MODBYTES];
+    myhash(challenge, challenge_len, h);
+
+    int ok = verifyECPProof(&G, &j->Q, h, j->c, j->s);
     if (ok) {
         ECP *A = &resp->cred.A;
         ECP *B = &resp->cred.B;
@@ -758,7 +756,7 @@ static int join_server(csprng *RNG, struct GroupPrivateKey *priv, struct JoinMes
         ECP_add(C, D);
         PAIR_G1mul(C, priv->x);
 
-        makeECPProofEquals(RNG, &G, Q, B, D, tmp, 0, 0, resp->c, resp->s);
+        makeECPProofEquals(RNG, &G, Q, B, D, tmp, 0, resp->c, resp->s);
     }
     return ok;
 }
@@ -793,7 +791,7 @@ static int join_finish_client(struct GroupPublicKey *pub, struct UserPrivateKey 
     ECP_copy(&Q, &G);
     PAIR_G1mul(&Q, priv->gsk);
 
-    if (!verifyECPProofEquals(&G, &Q, &resp->cred.B, &resp->cred.D, 0, 0, resp->c, resp->s)) {
+    if (!verifyECPProofEquals(&G, &Q, &resp->cred.B, &resp->cred.D, 0, resp->c, resp->s)) {
         return 0;
     }
 
@@ -811,6 +809,9 @@ static int join_finish_client(struct GroupPublicKey *pub, struct UserPrivateKey 
 
 static void sign(csprng *RNG, struct UserPrivateKey *priv, char* msg, int msg_len, char* bsn, int bsn_len, struct Signature *sig)
 {
+    char hh[2 * MODBYTES];
+    char h[MODBYTES];
+
     ECP_copy(&sig->A, &priv->cred.A);
     ECP_copy(&sig->B, &priv->cred.B);
     ECP_copy(&sig->C, &priv->cred.C);
@@ -826,40 +827,37 @@ static void sign(csprng *RNG, struct UserPrivateKey *priv, char* msg, int msg_le
 
     // Map basename to point in G1 (bsn should be 32 bytes and result of crypto hash like sha256)
     ECP BSN;
-    mapit(bsn, &BSN);
+    myhash(bsn, bsn_len, h);
+    mapit(h, &BSN);
     ECP_copy(&sig->NYM, &BSN);
     PAIR_G1mul(&sig->NYM, priv->gsk);
 
-    // Compute sha256(msg || bsn) to be used in proof of equality
-    char hh_msg_bsn[32];
-    hash256 h_msg_bsn;
-    HASH256_init(&h_msg_bsn);
-    for (int i=0; i < msg_len; ++i) HASH256_process(&h_msg_bsn, msg[i]);
-    for (int i=0; i < bsn_len; ++i) HASH256_process(&h_msg_bsn, bsn[i]);
-    HASH256_hash(&h_msg_bsn, hh_msg_bsn);
-    makeECPProofEquals(RNG, &sig->B, &BSN, &sig->D, &sig->NYM, priv->gsk, hh_msg_bsn, 32, sig->c, sig->s);
+    // Compute H(H(msg) || H(bsn)) to be used in proof of equality
+    myhash(msg, msg_len, &hh[0]);
+    myhash(bsn, bsn_len, &hh[MODBYTES]);
+    myhash(hh, sizeof(hh), h);
+    makeECPProofEquals(RNG, &sig->B, &BSN, &sig->D, &sig->NYM, priv->gsk, h, sig->c, sig->s);
 }
 
 static int verify(char *msg, int msg_len, char *bsn, int bsn_len, struct Signature *sig, struct GroupPublicKey *pub, csprng *RNG)
 {
-    // Map basename to point in G1 (bsn should be 32 bytes and result of crypto hash like sha256)
+    char hh[2 * MODBYTES];
+    char h[MODBYTES];
+
+    // Map basename to point in G1
     ECP BSN;
-    mapit(bsn, &BSN);
+    myhash(bsn, bsn_len, h);
+    mapit(h, &BSN);
 
-    // Compute sha256(msg || bsn) to be used in proof of equality
-    char hh_msg_bsn[32];
-    hash256 h_msg_bsn;
-    HASH256_init(&h_msg_bsn);
-    for (int i=0; i < msg_len; ++i) HASH256_process(&h_msg_bsn, msg[i]);
-    for (int i=0; i <  bsn_len; ++i) HASH256_process(&h_msg_bsn, bsn[i]);
-    HASH256_hash(&h_msg_bsn, hh_msg_bsn);
+    // Compute H(H(msg) || H(bsn)) to be used in proof of equality
+    myhash(msg, msg_len, &hh[0]);
+    myhash(bsn, bsn_len, &hh[MODBYTES]);
+    myhash(hh, sizeof(hh), h);
 
-    return verifyECPProofEquals(&sig->B, &BSN, &sig->D, &sig->NYM, hh_msg_bsn, 32, sig->c, sig->s)
+    return verifyECPProofEquals(&sig->B, &BSN, &sig->D, &sig->NYM, h, sig->c, sig->s)
      && !ECP_isinf(&sig->A) && !ECP_isinf(&sig->B)
      && verifyAuxFast(&sig->A, &sig->B, &sig->C, &sig->D, &pub->X, &pub->Y, RNG);
 }
-
-
 
 // External interface:
 

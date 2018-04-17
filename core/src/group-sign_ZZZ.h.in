@@ -10,9 +10,28 @@ extern "C" {
 #endif
 
 #include "pair_ZZZ.h"
+#include "pbc_support.h"
 
 #ifdef __cplusplus
 #undef C99
+#endif
+
+#define MYCURVE_ZZZ
+
+#ifdef MYCURVE_BN254
+#define HASH_TYPE SHA256
+#endif
+
+#ifdef MYCURVE_BLS383
+#define HASH_TYPE SHA384
+#endif
+
+#ifndef HASH_TYPE
+#error "HASH_TYPE is not defined. Make sure used curve is supported."
+#endif
+
+#if CURVETYPE_ZZZ!=WEIERSTRASS
+#error "CURVETYPE_ZZZ must be WEIERSTRASS"
 #endif
 
 // TODO: replacing macros by functions would improve tool support
