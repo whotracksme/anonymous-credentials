@@ -34,7 +34,7 @@
 #endif
 
 #define MODBYTES MODBYTES_XXX
-#define ECPSIZE (2*MODBYTES)
+#define ECPSIZE ((2*MODBYTES) + 1)
 #define ECP2SIZE (4*MODBYTES)
 #define BIGSIZE MODBYTES
 
@@ -249,13 +249,8 @@ static int serialize_ECP(ECP* in, octet* out)
   int len = out->len;
   out->len += ECPSIZE;
   if (out->len <= out->max) {
-    // ECP_toOctet uses an extra byte to indicate MONTGOMERY/WEIERSTRASS form
-    // but we don't: just WEIERSTRASS
     octet tmp = {0, out->max - len, &out->val[len]};
-    BIG x,y;
-    ECP_ZZZ_get(x,y,in);
-    BIG_XXX_toBytes(&tmp.val[0], x);
-    BIG_XXX_toBytes(&tmp.val[MODBYTES], y);
+    ECP_ZZZ_toOctet(&tmp, in);
     return 1;
   }
   return 0;
@@ -266,10 +261,7 @@ static int deserialize_ECP(octet* in, ECP* out)
   in->len += ECPSIZE;
   if (in->len <= in->max) {
     octet tmp = {0, in->max - len, &in->val[len]};
-    BIG x,y;
-    BIG_XXX_fromBytes(x,&(tmp.val[0]));
-    BIG_XXX_fromBytes(y,&(tmp.val[MODBYTES]));
-    return ECP_ZZZ_set(out,x,y) && 1;
+    return ECP_ZZZ_fromOctet(out, &tmp) && 1;
   }
   return 0;
 }
@@ -320,7 +312,6 @@ static void ECP2challenge(ECP2* Y, ECP2* G, ECP2* GR, BIG c)
     BIG order;
     BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
     BIG_XXX_mod(c, order);
-    BIG_XXX_norm(c); // Needed?
 }
 
 // message is either NULL or has length MODBYTES
@@ -346,7 +337,6 @@ static void ECPchallenge(char* message, ECP* Y, ECP* G, ECP* GR, BIG c)
     BIG order;
     BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
     BIG_XXX_mod(c, order);
-    BIG_XXX_norm(c); // Needed?
 }
 
 // make POK of X such that Y = G ** X
@@ -355,14 +345,13 @@ static void ECPchallenge(char* message, ECP* Y, ECP* G, ECP* GR, BIG c)
 static void makeECPProof(csprng* RNG, ECP* G, ECP* Y, BIG x, char *message, BIG c, BIG s)
 {
     BIG r, order;
+    BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
     randomModOrder(r, RNG);
     ECP GR;
     ECP_ZZZ_copy(&GR, G);
     PAIR_ZZZ_G1mul(&GR, r);
     ECPchallenge(message, Y, G, &GR, c);
-    BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
     BIG_XXX_modmul(s, c, x, order);
-    BIG_XXX_modneg(s, s, order);
     BIG_XXX_add(s, s, r);
     BIG_XXX_mod(s, order);
 }
@@ -390,12 +379,12 @@ static void ECPchallengeEquals(char* message, ECP* Y, ECP* Z, ECP* A, ECP* B, EC
     BIG order;
     BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
     BIG_XXX_mod(c, order);
-    BIG_XXX_norm(c); // Needed?
 }
 
 static void makeECPProofEquals(csprng* RNG, ECP* A, ECP* B, ECP* Y, ECP* Z, BIG x, char* message, BIG c, BIG s)
 {
     BIG r, order;
+    BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
     randomModOrder(r, RNG);
     ECP AR, BR;
     ECP_ZZZ_copy(&AR, A);
@@ -403,9 +392,7 @@ static void makeECPProofEquals(csprng* RNG, ECP* A, ECP* B, ECP* Y, ECP* Z, BIG 
     PAIR_ZZZ_G1mul(&AR, r);
     PAIR_ZZZ_G1mul(&BR, r);
     ECPchallengeEquals(message, Y, Z, A, B, &AR, &BR, c);
-    BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
     BIG_XXX_modmul(s, c, x, order);
-    BIG_XXX_modneg(s, s, order);
     BIG_XXX_add(s, s, r);
     BIG_XXX_mod(s, order);
 }
@@ -414,11 +401,14 @@ static void makeECPProofEquals(csprng* RNG, ECP* A, ECP* B, ECP* Y, ECP* Z, BIG 
 // verify that T = (G ** R) * (Y ** C), C = H(G, Y, T)
 static int verifyECPProof(ECP* G, ECP* Y, char* message, BIG c, BIG s)
 {
+    BIG cn, order;
+    BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
+    BIG_XXX_modneg(cn, c, order);
     ECP GS, YC;
     ECP_ZZZ_copy(&GS, G);
     ECP_ZZZ_copy(&YC, Y);
     PAIR_ZZZ_G1mul(&GS, s);
-    PAIR_ZZZ_G1mul(&YC, c);
+    PAIR_ZZZ_G1mul(&YC, cn);
     ECP_ZZZ_add(&GS, &YC);
     BIG cc;
     ECPchallenge(message, Y, G, &GS, cc);
@@ -427,15 +417,18 @@ static int verifyECPProof(ECP* G, ECP* Y, char* message, BIG c, BIG s)
 
 static int verifyECPProofEquals(ECP* A, ECP* B, ECP* Y, ECP* Z, char* message, BIG c, BIG s)
 {
+    BIG cn, order;
+    BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
+    BIG_XXX_modneg(cn, c, order);
     ECP AS, YC, BS, ZC;
     ECP_ZZZ_copy(&AS, A);
     ECP_ZZZ_copy(&YC, Y);
     ECP_ZZZ_copy(&BS, B);
     ECP_ZZZ_copy(&ZC, Z);
     PAIR_ZZZ_G1mul(&AS, s);
-    PAIR_ZZZ_G1mul(&YC, c);
+    PAIR_ZZZ_G1mul(&YC, cn);
     PAIR_ZZZ_G1mul(&BS, s);
-    PAIR_ZZZ_G1mul(&ZC, c);
+    PAIR_ZZZ_G1mul(&ZC, cn);
     ECP_ZZZ_add(&AS, &YC);
     ECP_ZZZ_add(&BS, &ZC);
     BIG cc;
@@ -448,14 +441,13 @@ static int verifyECPProofEquals(ECP* A, ECP* B, ECP* Y, ECP* Z, char* message, B
 static void makeECP2Proof(csprng* RNG, ECP2* G, ECP2* Y, BIG x, BIG c, BIG s)
 {
     BIG r, order;
+    BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
     randomModOrder(r, RNG);
     ECP2 GR;
     ECP2_ZZZ_copy(&GR, G);
     PAIR_ZZZ_G2mul(&GR, r);
     ECP2challenge(Y, G, &GR, c);
-    BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
     BIG_XXX_modmul(s, c, x, order);
-    BIG_XXX_modneg(s, s, order);
     BIG_XXX_add(s, s, r);
     BIG_XXX_mod(s, order);
 }
@@ -465,11 +457,14 @@ static void makeECP2Proof(csprng* RNG, ECP2* G, ECP2* Y, BIG x, BIG c, BIG s)
 // verify that T = (G ** R) * (Y ** C), C = H(G, Y, T)
 static int verifyECP2Proof(ECP2* G, ECP2* Y, BIG c, BIG s)
 {
+    BIG cn, order;
+    BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
+    BIG_XXX_modneg(cn, c, order);
     ECP2 GS, YC;
     ECP2_ZZZ_copy(&GS, G);
     ECP2_ZZZ_copy(&YC, Y);
     PAIR_ZZZ_G2mul(&GS, s);
-    PAIR_ZZZ_G2mul(&YC, c);
+    PAIR_ZZZ_G2mul(&YC, cn);
     ECP2_ZZZ_add(&GS, &YC);
     BIG cc;
     ECP2challenge(Y, G, &GS, cc);
@@ -1203,4 +1198,20 @@ int GS_getSignatureTag(char* signature, int sig_len, char* tag, int* tag_len) {
 
 int GS_getStateSize() {
   return sizeof(GS_State);
+}
+
+const char* GS_version() {
+  return "1.0";
+}
+
+const char* GS_big() {
+  return "XXX";
+}
+
+const char* GS_field() {
+  return "YYY";
+}
+
+const char* GS_curve() {
+  return "ZZZ";
 }

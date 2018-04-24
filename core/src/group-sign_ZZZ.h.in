@@ -34,6 +34,10 @@ int GS_sign(void* state, char* msg, int msg_len, char* bsn, int bsn_len, char* s
 int GS_verify(void* state, char* msg, int msg_len, char* bsn, int bsn_len, char* signature, int len);
 int GS_getSignatureTag(char* signature, int sig_len, char* tag, int* tag_len);
 int GS_getStateSize();
+const char* GS_version();
+const char* GS_big();
+const char* GS_field();
+const char* GS_curve();
 
 #ifdef __cplusplus
 } // end extern "C"
