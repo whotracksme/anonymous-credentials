@@ -86,6 +86,10 @@ EMFLAGS=${!EMFLAGS}
        '_GS_destroyState', \
        '_GS_startJoinStatic', \
        '_GS_finishJoinStatic', \
+       '_GS_version', \
+       '_GS_big', \
+       '_GS_field', \
+       '_GS_curve', \
        '_GS_getStateSize' \
        ]" \
 )

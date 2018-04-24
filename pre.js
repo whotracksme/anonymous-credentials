@@ -1,5 +1,7 @@
+var BUFFER_SIZE = 10 * 1024;
+
 function _arrayToPtr(data, ptr) {
-  if (data.length > GroupSignManager.BUFFER_SIZE) {
+  if (data.length > BUFFER_SIZE) {
     throw new Error('Data size exceeded');
   }
   writeArrayToMemory(data, ptr);
@@ -29,11 +31,9 @@ function GroupSignManager() {
   Module._GS_destroyState(state);
 }
 
-GroupSignManager.BUFFER_SIZE = 10 * 1024;
-
 GroupSignManager.prototype._getBuffer = function() {
   // TODO: reduce the conservative upper bound BUFFER_SIZE
-  const buffer = _malloc(GroupSignManager.BUFFER_SIZE);
+  const buffer = _malloc(BUFFER_SIZE);
   this.buffers.push(buffer);
   return buffer;
 }
@@ -87,17 +87,17 @@ GroupSignManager.prototype._makeBindings = function() {
         });
         if (output === 'array') {
           var ptr = self._getBuffer();
-          setValue(ptr, GroupSignManager.BUFFER_SIZE - 4, 'i32');
+          setValue(ptr, BUFFER_SIZE - 4, 'i32');
           funcArgs.push(ptr + 4);
           funcArgs.push(ptr);
         } else if (output === 'joinstatic') {
           var ptr = self._getBuffer();
-          setValue(ptr, GroupSignManager.BUFFER_SIZE - 4, 'i32');
+          setValue(ptr, BUFFER_SIZE - 4, 'i32');
           funcArgs.push(ptr + 4);
           funcArgs.push(ptr);
 
           var ptr2 = self._getBuffer();
-          setValue(ptr2, GroupSignManager.BUFFER_SIZE - 4, 'i32');
+          setValue(ptr2, BUFFER_SIZE - 4, 'i32');
           funcArgs.push(ptr2 + 4);
           funcArgs.push(ptr2);
         }
@@ -161,6 +161,12 @@ GroupSignManager.prototype._makeBindings = function() {
 
 Module.getGroupSigner = function () {
   return initPromise.then(function () {
+    // Setting static properties
+    GroupSignManager._version = UTF8ToString(Module._GS_version());
+    GroupSignManager._big = UTF8ToString(Module._GS_big());
+    GroupSignManager._field = UTF8ToString(Module._GS_field());
+    GroupSignManager._curve = UTF8ToString(Module._GS_curve());
+
     return GroupSignManager;
   });
 }
