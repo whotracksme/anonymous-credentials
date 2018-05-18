@@ -90,7 +90,5 @@ EMFLAGS=${!EMFLAGS}
        '_GS_big', \
        '_GS_field', \
        '_GS_curve', \
-       '_GS_getStateSize' \
-       ]" \
-)
+       '_GS_getStateSize']")
 done
