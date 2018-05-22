@@ -951,34 +951,6 @@ int GS_loadGroupPubKey(void* rawstate, char* data, int len) {
   return GS_RETURN_SUCCESS;
 }
 
-int GS_startJoin(void* rawstate, char* challenge, int challenge_len, char* joinmsg, int* len) {
-  message("GS_startJoin called");
-
-  GS_State* state = (GS_State*)rawstate;
-  if (!((1 << GS_SEEDED)&state->state) || !((1 << GS_GROUP_PUBKEY)&state->state)) {
-    message("GS_startJoin: GS_RETURN_UNINITIALIZED");
-    return GS_RETURN_UNINITIALIZED;
-  }
-
-  state->state &= ~(1 << GS_USERCREDS);
-  log_state(state->state);
-
-  struct JoinMessage j;
-  join_client(&state->_rng, challenge, challenge_len, &j, &state->_userPriv);
-  octet o = {0, *len, joinmsg};
-  if (!serialize_join_message(&j, &o)) {
-    message("GS_startJoin: GS_INVALID_DATA");
-    return GS_INVALID_DATA;
-  }
-
-  *len = o.len;
-  state->state |= (1 << GS_STARTJOIN);
-  log_state(state->state);
-
-  message("GS_startJoin: GS_RETURN_SUCCESS");
-  return GS_RETURN_SUCCESS;
-}
-
 int GS_startJoinStatic(
   void* rawstate,
   char* challenge, // in
@@ -1015,25 +987,6 @@ int GS_startJoinStatic(
   return GS_RETURN_SUCCESS;
 }
 
-int GS_finishJoin(void* rawstate, char* joinresponse, int len) {
-  GS_State* state = (GS_State*)rawstate;
-  if (!((1 << GS_STARTJOIN)&state->state)) {
-    return GS_RETURN_UNINITIALIZED;
-  }
-  state->state &= ~(1 << GS_STARTJOIN);
-  log_state(state->state);
-
-  octet o = {0, len, joinresponse};
-  struct JoinResponse resp;
-  if (!deserialize_join_response(&o, &resp) || !join_finish_client(&state->_priv.pub, &state->_userPriv, &resp)) {
-    return GS_INVALID_DATA;
-  }
-
-  state->state |= (1 << GS_USERCREDS);
-  log_state(state->state);
-
-  return GS_RETURN_SUCCESS;
-}
 
 int GS_finishJoinStatic(
   char* publickey, int len_publickey, // in
