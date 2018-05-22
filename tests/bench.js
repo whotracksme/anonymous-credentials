@@ -2,8 +2,8 @@ const expect = require('chai').expect;
 
 const testModules = {
   native: '../lib/index',
-  wasm: '../dist/group-sign-wasm',
-  asmjs: '../dist/group-sign-asmjs',
+  wasm: '../lib/wasm',
+  asmjs: '../lib/asmjs',
 };
 
 function time(fn) {
@@ -25,7 +25,7 @@ function doTests(name, getGroupSigner) {
   }
 
   return getGroupSigner().then((s) => {
-    GroupSigner = s.GroupSigner;
+    GroupSigner = s;
 
     const server = new GroupSigner();
     server.seed(seed1);
