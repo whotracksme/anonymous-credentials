@@ -8,19 +8,7 @@ function _arrayToPtr(data, ptr) {
   return ptr;
 }
 
-var initPromise = new Promise(function(resolve, reject) {
-  var t = setTimeout(function() {
-    reject(new Error('group-signer init timed out'));
-  }, 30 * 1000);
-
-  // Reject initialization after 30 seconds
-  Module.postRun = (Module.postRun || []).concat(function() {
-    clearTimeout(t);
-    resolve();
-  });
-});
-
-function GroupSignManager() {
+function GroupSigner() {
   this.buffers = [];
   this._makeBindings();
 
@@ -31,21 +19,21 @@ function GroupSignManager() {
   Module._GS_destroyState(state);
 }
 
-GroupSignManager.prototype._getBuffer = function() {
+GroupSigner.prototype._getBuffer = function() {
   // TODO: reduce the conservative upper bound BUFFER_SIZE
   const buffer = _malloc(BUFFER_SIZE);
   this.buffers.push(buffer);
   return buffer;
 }
 
-GroupSignManager.prototype._freeBuffers = function() {
+GroupSigner.prototype._freeBuffers = function() {
   this.buffers.forEach(function(buffer) {
     _free(buffer);
   });
   this.buffers = [];
 }
 
-GroupSignManager.prototype._updateState = function(state) {
+GroupSigner.prototype._updateState = function(state) {
   // TODO: don't allocate every time
   this.state = (new Uint8Array(
     HEAPU8.buffer,
@@ -54,7 +42,7 @@ GroupSignManager.prototype._updateState = function(state) {
   )).slice();
 }
 
-GroupSignManager.prototype._makeBindings = function() {
+GroupSigner.prototype._makeBindings = function() {
   var self = this;
   function _(func, inputs, output, context) {
     inputs = inputs === undefined ? [] : inputs;
@@ -159,14 +147,4 @@ GroupSignManager.prototype._makeBindings = function() {
   this.finishJoinStatic = _('_GS_finishJoinStatic', [0, 0, 0], 'array', false);
 }
 
-Module.getGroupSigner = function () {
-  return initPromise.then(function () {
-    // Setting static properties
-    GroupSignManager._version = UTF8ToString(Module._GS_version());
-    GroupSignManager._big = UTF8ToString(Module._GS_big());
-    GroupSignManager._field = UTF8ToString(Module._GS_field());
-    GroupSignManager._curve = UTF8ToString(Module._GS_curve());
-
-    return GroupSignManager;
-  });
-}
+Module.GroupSigner = GroupSigner;
