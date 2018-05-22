@@ -9,8 +9,6 @@ extern int GS_seed(void* state, char* seed, int seed_length);
 extern int GS_setupGroup(void* state);
 extern int GS_loadGroupPrivKey(void* state, char* data, int len);
 extern int GS_loadGroupPubKey(void* state, char* data, int len);
-extern int GS_startJoin(void* state, char* challenge, int challenge_len, char* joinmsg, int* len);
-extern int GS_finishJoin(void* state, char* joinresponse, int len);
 extern int GS_loadUserPrivKey(void* state, char* in, int in_len);
 extern int GS_exportGroupPrivKey(void* state, char* out, int* out_len);
 extern int GS_exportGroupPubKey(void* state, char* out, int* out_len);
@@ -247,31 +245,6 @@ napi_value SetGroupPrivKey(napi_env env, napi_callback_info info) {
   return getUndefined(env);
 }
 
-napi_value StartJoin(napi_env env, napi_callback_info info) {
-  size_t argc = 1;
-  napi_value args[1];
-  napi_value jsthis;
-  NAPI_CALL(napi_get_cb_info(env, info, &argc, args, &jsthis, NULL));
-  GroupSigner* obj;
-  NAPI_CALL(napi_unwrap(env, jsthis, (void**)(&obj)));
-
-  size_t len;
-  char* data = getData(env, args[0], &len);
-  if (len != 32) {
-    NAPI_CALL(napi_throw_error(env, NULL, "Challenge must be exactly 32 bytes long"));
-    return NULL;
-  }
-
-  char buf[1024];
-  int out_len = sizeof(buf);
-  GS_CALL(GS_startJoin(obj->state, data, len, buf, &out_len));
-
-  napi_value out_buf;
-  NAPI_CALL(napi_create_buffer_copy(
-       env, out_len, buf, NULL, &out_buf));
-  return out_buf;
-}
-
 napi_value ProcessJoin(napi_env env, napi_callback_info info) {
   size_t argc = 2;
   napi_value args[2];
@@ -298,21 +271,6 @@ napi_value ProcessJoin(napi_env env, napi_callback_info info) {
   NAPI_CALL(napi_create_buffer_copy(
        env, out_len, buf, NULL, &out_buf));
   return out_buf;
-}
-
-napi_value FinishJoin(napi_env env, napi_callback_info info) {
-  size_t argc = 1;
-  napi_value args[1];
-  napi_value jsthis;
-  NAPI_CALL(napi_get_cb_info(env, info, &argc, args, &jsthis, NULL));
-  GroupSigner* obj;
-  NAPI_CALL(napi_unwrap(env, jsthis, (void**)(&obj)));
-
-  size_t len_join;
-  char* join = getData(env, args[0], &len_join);
-  GS_CALL(GS_finishJoin(obj->state, join, len_join));
-
-  return getUndefined(env);
 }
 
 napi_value Sign(napi_env env, napi_callback_info info) {
@@ -503,9 +461,7 @@ napi_value Init(napi_env env, napi_value exports) {
     DECLARE_NAPI_METHOD("getGroupPrivKey", GetGroupPrivKey),
     DECLARE_NAPI_METHOD("setGroupPubKey", SetGroupPubKey),
     DECLARE_NAPI_METHOD("setGroupPrivKey", SetGroupPrivKey),
-    DECLARE_NAPI_METHOD("startJoin", StartJoin),
     DECLARE_NAPI_METHOD("processJoin", ProcessJoin),
-    DECLARE_NAPI_METHOD("finishJoin", FinishJoin),
     DECLARE_NAPI_METHOD("sign", Sign),
     DECLARE_NAPI_METHOD("verify", Verify),
     DECLARE_NAPI_METHOD("getSignatureTag", GetSignatureTag),

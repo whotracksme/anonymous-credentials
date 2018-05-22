@@ -10,8 +10,6 @@ int GS_seed(void* state, char* seed, int seed_length);
 int GS_setupGroup(void* state);
 int GS_loadGroupPrivKey(void* state, char* data, int len);
 int GS_loadGroupPubKey(void* state, char* data, int len);
-int GS_startJoin(void* state, char* challenge, int challenge_len, char* joinmsg, int* len);
-int GS_finishJoin(void* state, char* joinresponse, int len);
 int GS_startJoinStatic(
   void* state,
   char* challenge, // in

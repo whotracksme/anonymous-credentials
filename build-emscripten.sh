@@ -74,8 +74,6 @@ EMFLAGS=${!EMFLAGS}
        '_GS_setupGroup', \
        '_GS_loadGroupPrivKey', \
        '_GS_loadGroupPubKey', \
-       '_GS_startJoin', \
-       '_GS_finishJoin', \
        '_GS_loadUserPrivKey', \
        '_GS_exportGroupPrivKey', \
        '_GS_exportGroupPubKey', \
