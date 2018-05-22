@@ -6,7 +6,7 @@ const testModules = {
   asmjs: '../dist/group-sign-asmjs',
 };
 
-function doTests(name, { getGroupSigner }) {
+function doTests(name, getGroupSigner) {
   const seed1 = new Uint8Array(128);
   const seed2 = new Uint8Array(128);
 
@@ -18,7 +18,7 @@ function doTests(name, { getGroupSigner }) {
     var GroupSigner;
     before(function() {
       return getGroupSigner().then((s) => {
-        GroupSigner = s;
+        GroupSigner = s.GroupSigner;
       });
     });
     it('seed', () => {

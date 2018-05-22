@@ -12,7 +12,7 @@ function time(fn) {
   return Date.now() - t;
 }
 
-function doTests(name, { getGroupSigner }) {
+function doTests(name, getGroupSigner) {
   function log(...args) {
     console.log(name, ...args);
   }
@@ -25,7 +25,7 @@ function doTests(name, { getGroupSigner }) {
   }
 
   return getGroupSigner().then((s) => {
-    GroupSigner = s;
+    GroupSigner = s.GroupSigner;
 
     const server = new GroupSigner();
     server.seed(seed1);

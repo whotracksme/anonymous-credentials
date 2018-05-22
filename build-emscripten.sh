@@ -55,6 +55,7 @@ EMFLAGS=${!EMFLAGS}
   emcc ${EMFLAGS} \
     --pre-js pre.js \
     -s SINGLE_FILE=1 \
+    -s MODULARIZE=1 \
     -s NO_EXIT_RUNTIME=1 \
     -s ASSERTIONS=$EMCC_ASSERTIONS \
     $EMCC_FLAGS \
