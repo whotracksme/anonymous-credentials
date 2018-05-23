@@ -17,7 +17,7 @@ extern int GS_processJoin(void* state, char* joinmsg, int joinmsg_len, char* cha
 extern int GS_sign(void* state, char* msg, int msg_len, char* bsn, int bsn_len, char* signature, int* len);
 extern int GS_verify(void* state, char* msg, int msg_len, char* bsn, int bsn_len, char* signature, int len);
 extern int GS_getSignatureTag(char* signature, int sig_len, char* tag, int* tag_len);
-extern int GS_startJoinStatic(
+extern int GS_startJoin(
   void* state,
   char* challenge, // in
   int challenge_len, // in
@@ -25,7 +25,7 @@ extern int GS_startJoinStatic(
   char* joinmsg, int* len // out
 );
 
-extern int GS_finishJoinStatic(
+extern int GS_finishJoin(
   char* publickey, int len_publickey, // in
   char* gsk, int len_gsk, // in
   char* joinresponse, int len, // in
@@ -385,7 +385,7 @@ napi_value SetUserPrivKey(napi_env env, napi_callback_info info) {
   return getUndefined(env);
 }
 
-napi_value StartJoinStatic(napi_env env, napi_callback_info info) {
+napi_value StartJoin(napi_env env, napi_callback_info info) {
   size_t argc = 1;
   napi_value args[1];
   napi_value jsthis;
@@ -405,7 +405,7 @@ napi_value StartJoinStatic(napi_env env, napi_callback_info info) {
 
   char buf[1024];
   int out_len = sizeof(buf);
-  GS_CALL(GS_startJoinStatic(obj->state, data, len, bufgsk, &outgsk_len, buf, &out_len));
+  GS_CALL(GS_startJoin(obj->state, data, len, bufgsk, &outgsk_len, buf, &out_len));
 
   napi_value outgsk_buf;
   napi_value out_buf;
@@ -421,7 +421,7 @@ napi_value StartJoinStatic(napi_env env, napi_callback_info info) {
   return out_obj;
 }
 
-napi_value FinishJoinStatic(napi_env env, napi_callback_info info) {
+napi_value FinishJoin(napi_env env, napi_callback_info info) {
   size_t argc = 3;
   napi_value args[3];
   napi_value jsthis;
@@ -438,7 +438,7 @@ napi_value FinishJoinStatic(napi_env env, napi_callback_info info) {
 
   char buf[1024];
   int out_len = sizeof(buf);
-  GS_CALL(GS_finishJoinStatic(publickey, len_publickey, gsk, len_gsk, join, len_join, buf, &out_len));
+  GS_CALL(GS_finishJoin(publickey, len_publickey, gsk, len_gsk, join, len_join, buf, &out_len));
 
   napi_value out_buf;
   NAPI_CALL(napi_create_buffer_copy(
@@ -467,8 +467,8 @@ napi_value Init(napi_env env, napi_value exports) {
     DECLARE_NAPI_METHOD("getSignatureTag", GetSignatureTag),
     DECLARE_NAPI_METHOD("getUserPrivKey", GetUserPrivKey),
     DECLARE_NAPI_METHOD("setUserPrivKey", SetUserPrivKey),
-    DECLARE_NAPI_METHOD("startJoinStatic", StartJoinStatic),
-    DECLARE_NAPI_METHOD("finishJoinStatic", FinishJoinStatic),
+    DECLARE_NAPI_METHOD("startJoin", StartJoin),
+    DECLARE_NAPI_METHOD("finishJoin", FinishJoin),
 
     DECLARE_NAPI_STATIC("_version", version),
     DECLARE_NAPI_STATIC("_big", big),

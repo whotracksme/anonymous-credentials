@@ -86,11 +86,11 @@ async function doTests(name, getGroupSigner) {
 
       const challenge = new Uint8Array(32);
 
-      const { gsk, joinmsg } = client1.startJoinStatic(challenge);
+      const { gsk, joinmsg } = client1.startJoin(challenge);
 //      expect(Buffer.from(joinmsg).toString('base64')).to.equal('BT9lbZbwGrbcdOB/nOuW9IpdRqSGMV2jDGwIZWuqSeYNb/q99CbwWcY0/GbDoRgm9y14YaXergzcRGtg4pTBfAJ9WKP+TtgjlWA5VAredZxBqXy8TG89b2bb//v7MZn3JCJvjJ6DpWpyixEKJutbIYwWoBY5FlzoGMOZ4z7qrtk=');
 
       const joinresp = server.processJoin(joinmsg, challenge);
-      const credentials = client1.finishJoinStatic(server.getGroupPubKey(), gsk, joinresp);
+      const credentials = client1.finishJoin(server.getGroupPubKey(), gsk, joinresp);
 //      expect(Buffer.from(credentials).toString('base64')).to.equal('BM7vI6jTIwK0Ac5WnaRzb88VUxH2CsgyfCNGeBDLz/AP5sihZauBmzaLznlkWLU5tmhg9jr/imDZyj1m2yA2+xGrHBI9gm438t3GxdWANKkUFWCs9jPRYTgnOlJPevsbHHCayO0r7JB+tpvdHXZ0BIX1h+5hbn14SmfeJ6mMO+8attrejw9pltMu18GquD/QAI6ftSa75kQNvpfb9Rp+axAMgN/IvyloidMxXmRfI9rPSAWKfqmlPOoX52tjlNrEE++LloYuBFxDvggyl3+V4HbsIiEDIFABgr73n9PEr6UDn8tHTZ6eHQJxG4fuXzMHZR/qxfkX/j+OyUfAkYKN5gsON+kTRNLcWclrVI2Z+Q29GlBmTTFgsjZqbeb/9h8T');
 
       expect(() => {

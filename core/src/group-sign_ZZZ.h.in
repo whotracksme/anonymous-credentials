@@ -10,14 +10,14 @@ int GS_seed(void* state, char* seed, int seed_length);
 int GS_setupGroup(void* state);
 int GS_loadGroupPrivKey(void* state, char* data, int len);
 int GS_loadGroupPubKey(void* state, char* data, int len);
-int GS_startJoinStatic(
+int GS_startJoin(
   void* state,
   char* challenge, // in
   int challenge_len, // in
   char* gsk, int* len_gsk, // out
   char* joinmsg, int* len // out
 );
-int GS_finishJoinStatic(
+int GS_finishJoin(
   char* publickey, int len_publickey, // in
   char* gsk, int len_gsk, // in
   char* joinresponse, int len, // in

@@ -34,9 +34,9 @@ function doTests(name, getGroupSigner) {
     const client = new GroupSigner();
     client.seed(seed2);
     const challenge = new Uint8Array(32);
-    const { gsk, joinmsg } = client.startJoinStatic(challenge);
+    const { gsk, joinmsg } = client.startJoin(challenge);
     const joinresp = server.processJoin(joinmsg, challenge);
-    const credentials = client.finishJoinStatic(server.getGroupPubKey(), gsk, joinresp);
+    const credentials = client.finishJoin(server.getGroupPubKey(), gsk, joinresp);
     client.setUserPrivKey(credentials);
 
     const N = 10;
