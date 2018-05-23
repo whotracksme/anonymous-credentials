@@ -74,10 +74,10 @@ EMFLAGS=${!EMFLAGS}
        '_GS_setupGroup', \
        '_GS_loadGroupPrivKey', \
        '_GS_loadGroupPubKey', \
-       '_GS_loadUserPrivKey', \
+       '_GS_loadUserCredentials', \
        '_GS_exportGroupPrivKey', \
        '_GS_exportGroupPubKey', \
-       '_GS_exportUserPrivKey', \
+       '_GS_exportUserCredentials', \
        '_GS_processJoin', \
        '_GS_sign', \
        '_GS_verify', \
@@ -89,5 +89,8 @@ EMFLAGS=${!EMFLAGS}
        '_GS_big', \
        '_GS_field', \
        '_GS_curve', \
+       '_GS_success', \
+       '_GS_failure', \
+       '_GS_error', \
        '_GS_getStateSize']")
 done

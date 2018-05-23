@@ -4,6 +4,24 @@
 extern "C" {
 #endif
 
+enum ReturnCodes {
+  GS_RETURN_FAILURE,
+  GS_RETURN_SUCCESS,
+  GS_SEED_TOO_SMALL,
+  GS_NOT_SEEDED,
+  GS_INVALID_GROUP_PRIVATE_KEY,
+  GS_INVALID_GROUP_PUBLIC_KEY,
+  GS_OUTPUT_BUFFER_TOO_SMALL,
+  GS_INVALID_USER_PRIVATE_KEY,
+  GS_INVALID_JOIN_RESPONSE,
+  GS_INVALID_USER_CREDENTIALS,
+  GS_NOT_SET_GROUP_PRIVATE_KEY,
+  GS_NOT_SET_GROUP_PUBLIC_KEY,
+  GS_NOT_SET_USER_CREDENTIALS,
+  GS_INVALID_JOIN_MESSAGE,
+  GS_INVALID_SIGNATURE
+};
+
 void* GS_createState();
 void GS_destroyState(void* state);
 int GS_seed(void* state, char* seed, int seed_length);
@@ -23,10 +41,10 @@ int GS_finishJoin(
   char* joinresponse, int len, // in
   char* credentials, int* len_credentials // out
 );
-int GS_loadUserPrivKey(void* state, char* in, int in_len);
+int GS_loadUserCredentials(void* state, char* in, int in_len);
 int GS_exportGroupPrivKey(void* state, char* out, int* out_len);
 int GS_exportGroupPubKey(void* state, char* out, int* out_len);
-int GS_exportUserPrivKey(void* state, char* out, int* out_len);
+int GS_exportUserCredentials(void* state, char* out, int* out_len);
 int GS_processJoin(void* state, char* joinmsg, int joinmsg_len, char* challenge, int challenge_len, char* out, int* out_len);
 int GS_sign(void* state, char* msg, int msg_len, char* bsn, int bsn_len, char* signature, int* len);
 int GS_verify(void* state, char* msg, int msg_len, char* bsn, int bsn_len, char* signature, int len);
@@ -36,6 +54,9 @@ const char* GS_version();
 const char* GS_big();
 const char* GS_field();
 const char* GS_curve();
+int GS_success();
+int GS_failure();
+const char* GS_error(int error_code);
 
 #ifdef __cplusplus
 } // end extern "C"
