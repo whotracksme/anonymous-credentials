@@ -1,8 +1,8 @@
 {
     "targets": [
         {
-            "target_name": "addon",
-            "sources": [ "addon.c" ],
+            "target_name": "groupsign",
+            "sources": [ "groupsign_napi.c" ],
             'link_settings': {
                 'libraries': [
                     '-L<(module_root_dir)/_build/nativebuild/core/src',

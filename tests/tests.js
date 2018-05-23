@@ -1,12 +1,15 @@
 const expect = require('chai').expect;
 
 const testModules = {
-  native: '../lib/index',
+  auto: '../lib/index',
   wasm: '../lib/wasm',
   asmjs: '../lib/asmjs',
+  native: '../lib/native',
+  emscripten: '../lib/emscripten',
 };
 
-async function doTests(name, getGroupSigner) {
+async function doTests(name, moduleName) {
+  const getGroupSigner = require(moduleName);
   const seed1 = new Uint8Array(128);
   const seed2 = new Uint8Array(128);
 
@@ -117,5 +120,5 @@ async function doTests(name, getGroupSigner) {
 
 
 Object.keys(testModules).forEach((name) => {
-  doTests(name, require(testModules[name]));
+  doTests(name, testModules[name]);
 });
