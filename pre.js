@@ -141,8 +141,8 @@ GroupSigner.prototype._makeBindings = function() {
   this.sign = _('_GS_sign', [32, 32], 'array');
   this.verify = _('_GS_verify', [32, 32, 0], 'boolean');
   this.getSignatureTag = _('_GS_getSignatureTag', [0], 'array', false);
-  this.startJoinStatic = _('_GS_startJoinStatic', [32], 'joinstatic');
-  this.finishJoinStatic = _('_GS_finishJoinStatic', [0, 0, 0], 'array', false);
+  this.startJoin = _('_GS_startJoin', [32], 'joinstatic');
+  this.finishJoin = _('_GS_finishJoin', [0, 0, 0], 'array', false);
 }
 
 Module.GroupSigner = GroupSigner;

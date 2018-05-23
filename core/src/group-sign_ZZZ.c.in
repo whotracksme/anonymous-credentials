@@ -951,18 +951,18 @@ int GS_loadGroupPubKey(void* rawstate, char* data, int len) {
   return GS_RETURN_SUCCESS;
 }
 
-int GS_startJoinStatic(
+int GS_startJoin(
   void* rawstate,
   char* challenge, // in
   int challenge_len, // in
   char* gsk, int* len_gsk, // out
   char* joinmsg, int* len // out
 ) {
-  message("GS_startJoinStatic called");
+  message("GS_startJoin called");
 
   GS_State* state = (GS_State*)rawstate;
   if (!((1 << GS_SEEDED)&state->state)) {
-    message("GS_startJoinStatic: GS_RETURN_UNINITIALIZED");
+    message("GS_startJoin: GS_RETURN_UNINITIALIZED");
     return GS_RETURN_UNINITIALIZED;
   }
 
@@ -971,24 +971,24 @@ int GS_startJoinStatic(
   join_client(&state->_rng, challenge, challenge_len, &j, &userPriv);
   octet o = {0, *len, joinmsg};
   if (!serialize_join_message(&j, &o)) {
-    message("GS_startJoinStatic: GS_INVALID_DATA");
+    message("GS_startJoin: GS_INVALID_DATA");
     return GS_INVALID_DATA;
   }
   *len = o.len;
 
   octet o2 = {0, *len_gsk, gsk};
   if (!serialize_BIG(&userPriv.gsk, &o2)) {
-    message("GS_startJoinStatic: GS_INVALID_DATA");
+    message("GS_startJoin: GS_INVALID_DATA");
     return GS_INVALID_DATA;
   }
   *len_gsk = o2.len;
 
-  message("GS_startJoinStatic: GS_RETURN_SUCCESS");
+  message("GS_startJoin: GS_RETURN_SUCCESS");
   return GS_RETURN_SUCCESS;
 }
 
 
-int GS_finishJoinStatic(
+int GS_finishJoin(
   char* publickey, int len_publickey, // in
   char* gsk, int len_gsk, // in
   char* joinresponse, int len, // in

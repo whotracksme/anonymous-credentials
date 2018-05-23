@@ -83,8 +83,8 @@ EMFLAGS=${!EMFLAGS}
        '_GS_verify', \
        '_GS_getSignatureTag', \
        '_GS_destroyState', \
-       '_GS_startJoinStatic', \
-       '_GS_finishJoinStatic', \
+       '_GS_startJoin', \
+       '_GS_finishJoin', \
        '_GS_version', \
        '_GS_big', \
        '_GS_field', \
