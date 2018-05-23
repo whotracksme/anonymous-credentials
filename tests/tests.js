@@ -9,7 +9,6 @@ const testModules = {
 };
 
 async function doTests(name, moduleName) {
-  const getGroupSigner = require(moduleName);
   const seed1 = new Uint8Array(128);
   const seed2 = new Uint8Array(128);
 
@@ -20,6 +19,7 @@ async function doTests(name, moduleName) {
   describe('GroupSigner - ' + name, () => {
     var GroupSigner;
     before(function() {
+      const getGroupSigner = require(moduleName);
       return getGroupSigner().then((s) => {
         GroupSigner = s;
       });
