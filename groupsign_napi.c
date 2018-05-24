@@ -9,17 +9,15 @@ extern int GS_seed(void* state, char* seed, int seed_length);
 extern int GS_setupGroup(void* state);
 extern int GS_loadGroupPrivKey(void* state, char* data, int len);
 extern int GS_loadGroupPubKey(void* state, char* data, int len);
-extern int GS_startJoin(void* state, char* challenge, int challenge_len, char* joinmsg, int* len);
-extern int GS_finishJoin(void* state, char* joinresponse, int len);
-extern int GS_loadUserPrivKey(void* state, char* in, int in_len);
+extern int GS_loadUserCredentials(void* state, char* in, int in_len);
 extern int GS_exportGroupPrivKey(void* state, char* out, int* out_len);
 extern int GS_exportGroupPubKey(void* state, char* out, int* out_len);
-extern int GS_exportUserPrivKey(void* state, char* out, int* out_len);
+extern int GS_exportUserCredentials(void* state, char* out, int* out_len);
 extern int GS_processJoin(void* state, char* joinmsg, int joinmsg_len, char* challenge, int challenge_len, char* out, int* out_len);
 extern int GS_sign(void* state, char* msg, int msg_len, char* bsn, int bsn_len, char* signature, int* len);
 extern int GS_verify(void* state, char* msg, int msg_len, char* bsn, int bsn_len, char* signature, int len);
 extern int GS_getSignatureTag(char* signature, int sig_len, char* tag, int* tag_len);
-extern int GS_startJoinStatic(
+extern int GS_startJoin(
   void* state,
   char* challenge, // in
   int challenge_len, // in
@@ -27,7 +25,7 @@ extern int GS_startJoinStatic(
   char* joinmsg, int* len // out
 );
 
-extern int GS_finishJoinStatic(
+extern int GS_finishJoin(
   char* publickey, int len_publickey, // in
   char* gsk, int len_gsk, // in
   char* joinresponse, int len, // in
@@ -38,6 +36,13 @@ extern const char* GS_version();
 extern const char* GS_big();
 extern const char* GS_field();
 extern const char* GS_curve();
+extern int GS_success();
+extern int GS_failure();
+extern const char* GS_error(int error_code);
+
+#define GS_STR_HELPER(x) #x
+
+#define GS_STR(x) GS_STR_HELPER(x)
 
 #define DECLARE_NAPI_METHOD(name, func) \
   { name, 0, func, 0, 0, 0, napi_default, 0 }
@@ -47,11 +52,31 @@ extern const char* GS_curve();
 
 #define NAPI_CALL(call) (assert(call == napi_ok))
 
-#define GS_CALL(call) \
-  if (call != 1) { \
-    NAPI_CALL(napi_throw_error(env, NULL, "Wrong input data or state")); \
+#define NAPI_GET_ARGS(nargs, env, info, argc, args, jsthis) \
+do { \
+  NAPI_CALL(napi_get_cb_info(env, info, &argc, args, &jsthis, NULL)); \
+  if (argc != nargs) { \
+    NAPI_CALL(napi_throw_error(env, NULL, "expected " GS_STR(nargs) " arguments")); \
     return NULL; \
-  }
+  } \
+} while (0)
+
+#define GS_GET_DATA(data, env, in, len) \
+do { \
+  data = getData(env, in, len); \
+  if (data == NULL) { \
+    NAPI_CALL(napi_throw_error(env, NULL, "input data must be uint8array")); \
+    return NULL; \
+  } \
+} while (0)
+
+#define GS_CALL(call) \
+do { \
+  if (call != GS_success()) { \
+    NAPI_CALL(napi_throw_error(env, NULL, GS_error(call))); \
+    return NULL; \
+  } \
+} while (0)
 
 typedef struct {
   napi_env env_;
@@ -126,7 +151,7 @@ char* getData(napi_env env, napi_value value, size_t* out_len) {
     env, value, &type, &length, NULL, &input_buffer, &byte_offset
   ));
 
-  if (type != napi_uint8_array || length <= 0) {
+  if (type != napi_uint8_array) {
     return NULL;
   }
 
@@ -154,42 +179,41 @@ napi_value Seed(napi_env env, napi_callback_info info) {
   size_t argc = 1;
   napi_value args[1];
   napi_value jsthis;
-  NAPI_CALL(napi_get_cb_info(env, info, &argc, args, &jsthis, NULL));
+  NAPI_GET_ARGS(1, env, info, argc, args, jsthis);
   GroupSigner* obj;
   NAPI_CALL(napi_unwrap(env, jsthis, (void**)(&obj)));
 
-  size_t len;
-  char* data = getData(env, args[0], &len);
-
-  GS_CALL(GS_seed(obj->state, data, len))
+  size_t len = 0;
+  char* data = NULL;
+  GS_GET_DATA(data, env, args[0], &len);
+  GS_CALL(GS_seed(obj->state, data, len));
 
   return getUndefined(env);
 }
 
 napi_value SetupGroup(napi_env env, napi_callback_info info) {
   size_t argc = 0;
-  // napi_value args[0];
   napi_value jsthis;
-  NAPI_CALL(napi_get_cb_info(env, info, &argc, NULL, &jsthis, NULL));
+  NAPI_GET_ARGS(0, env, info, argc, NULL, jsthis);
+
   GroupSigner* obj;
   NAPI_CALL(napi_unwrap(env, jsthis, (void**)(&obj)));
 
-  GS_CALL(GS_setupGroup(obj->state))
+  GS_CALL(GS_setupGroup(obj->state));
 
   return getUndefined(env);
 }
 
 napi_value GetGroupPubKey(napi_env env, napi_callback_info info) {
   size_t argc = 0;
-  // napi_value args[0];
   napi_value jsthis;
-  NAPI_CALL(napi_get_cb_info(env, info, &argc, NULL, &jsthis, NULL));
+  NAPI_GET_ARGS(0, env, info, argc, NULL, jsthis);
   GroupSigner* obj;
   NAPI_CALL(napi_unwrap(env, jsthis, (void**)(&obj)));
 
   char buf[4096];
   int out_len = sizeof(buf);
-  GS_CALL(GS_exportGroupPubKey(obj->state, buf, &out_len))
+  GS_CALL(GS_exportGroupPubKey(obj->state, buf, &out_len));
 
   napi_value out_buf;
   NAPI_CALL(napi_create_buffer_copy(
@@ -199,15 +223,14 @@ napi_value GetGroupPubKey(napi_env env, napi_callback_info info) {
 
 napi_value GetGroupPrivKey(napi_env env, napi_callback_info info) {
   size_t argc = 0;
-  // napi_value args[0];
   napi_value jsthis;
-  NAPI_CALL(napi_get_cb_info(env, info, &argc, NULL, &jsthis, NULL));
+  NAPI_GET_ARGS(0, env, info, argc, NULL, jsthis);
   GroupSigner* obj;
   NAPI_CALL(napi_unwrap(env, jsthis, (void**)(&obj)));
 
   char buf[4096];
   int out_len = sizeof(buf);
-  GS_CALL(GS_exportGroupPrivKey(obj->state, buf, &out_len))
+  GS_CALL(GS_exportGroupPrivKey(obj->state, buf, &out_len));
 
   napi_value out_buf;
   NAPI_CALL(napi_create_buffer_copy(
@@ -219,14 +242,15 @@ napi_value SetGroupPubKey(napi_env env, napi_callback_info info) {
   size_t argc = 1;
   napi_value args[1];
   napi_value jsthis;
-  NAPI_CALL(napi_get_cb_info(env, info, &argc, args, &jsthis, NULL));
+  NAPI_GET_ARGS(1, env, info, argc, args, jsthis);
   GroupSigner* obj;
   NAPI_CALL(napi_unwrap(env, jsthis, (void**)(&obj)));
 
-  size_t len;
-  char* data = getData(env, args[0], &len);
+  size_t len = 0;
+  char* data = NULL;
+  GS_GET_DATA(data, env, args[0], &len);
 
-  GS_CALL(GS_loadGroupPubKey(obj->state, data, len))
+  GS_CALL(GS_loadGroupPubKey(obj->state, data, len));
 
   return getUndefined(env);
 }
@@ -235,60 +259,34 @@ napi_value SetGroupPrivKey(napi_env env, napi_callback_info info) {
   size_t argc = 1;
   napi_value args[1];
   napi_value jsthis;
-  NAPI_CALL(napi_get_cb_info(env, info, &argc, args, &jsthis, NULL));
+  NAPI_GET_ARGS(1, env, info, argc, args, jsthis);
   GroupSigner* obj;
   NAPI_CALL(napi_unwrap(env, jsthis, (void**)(&obj)));
 
-  size_t len;
-  char* data = getData(env, args[0], &len);
+  size_t len = 0;
+  char* data = NULL;
+  GS_GET_DATA(data, env, args[0], &len);
 
-  GS_CALL(GS_loadGroupPrivKey(obj->state, data, len))
+  GS_CALL(GS_loadGroupPrivKey(obj->state, data, len));
 
   return getUndefined(env);
-}
-
-napi_value StartJoin(napi_env env, napi_callback_info info) {
-  size_t argc = 1;
-  napi_value args[1];
-  napi_value jsthis;
-  NAPI_CALL(napi_get_cb_info(env, info, &argc, args, &jsthis, NULL));
-  GroupSigner* obj;
-  NAPI_CALL(napi_unwrap(env, jsthis, (void**)(&obj)));
-
-  size_t len;
-  char* data = getData(env, args[0], &len);
-  if (len != 32) {
-    NAPI_CALL(napi_throw_error(env, NULL, "Challenge must be exactly 32 bytes long"));
-    return NULL;
-  }
-
-  char buf[1024];
-  int out_len = sizeof(buf);
-  GS_CALL(GS_startJoin(obj->state, data, len, buf, &out_len));
-
-  napi_value out_buf;
-  NAPI_CALL(napi_create_buffer_copy(
-       env, out_len, buf, NULL, &out_buf));
-  return out_buf;
 }
 
 napi_value ProcessJoin(napi_env env, napi_callback_info info) {
   size_t argc = 2;
   napi_value args[2];
   napi_value jsthis;
-  NAPI_CALL(napi_get_cb_info(env, info, &argc, args, &jsthis, NULL));
+  NAPI_GET_ARGS(2, env, info, argc, args, jsthis);
   GroupSigner* obj;
   NAPI_CALL(napi_unwrap(env, jsthis, (void**)(&obj)));
 
-  size_t len_join;
-  char* join = getData(env, args[0], &len_join);
+  size_t len_join = 0;
+  char* join = NULL;
+  GS_GET_DATA(join, env, args[0], &len_join);
 
-  size_t len_challenge;
-  char* challenge = getData(env, args[1], &len_challenge);
-  if (len_challenge != 32) {
-    NAPI_CALL(napi_throw_error(env, NULL, "Challenge must be exactly 32 bytes long"));
-    return NULL;
-  }
+  size_t len_challenge = 0;
+  char* challenge = NULL;
+  GS_GET_DATA(challenge, env, args[1], &len_challenge);
 
   char buf[1024];
   int out_len = sizeof(buf);
@@ -300,42 +298,21 @@ napi_value ProcessJoin(napi_env env, napi_callback_info info) {
   return out_buf;
 }
 
-napi_value FinishJoin(napi_env env, napi_callback_info info) {
-  size_t argc = 1;
-  napi_value args[1];
-  napi_value jsthis;
-  NAPI_CALL(napi_get_cb_info(env, info, &argc, args, &jsthis, NULL));
-  GroupSigner* obj;
-  NAPI_CALL(napi_unwrap(env, jsthis, (void**)(&obj)));
-
-  size_t len_join;
-  char* join = getData(env, args[0], &len_join);
-  GS_CALL(GS_finishJoin(obj->state, join, len_join));
-
-  return getUndefined(env);
-}
-
 napi_value Sign(napi_env env, napi_callback_info info) {
   size_t argc = 2;
   napi_value args[2];
   napi_value jsthis;
-  NAPI_CALL(napi_get_cb_info(env, info, &argc, args, &jsthis, NULL));
+  NAPI_GET_ARGS(2, env, info, argc, args, jsthis);
   GroupSigner* obj;
   NAPI_CALL(napi_unwrap(env, jsthis, (void**)(&obj)));
 
-  size_t len_msg;
-  char* msg = getData(env, args[0], &len_msg);
-  if (len_msg != 32) {
-    NAPI_CALL(napi_throw_error(env, NULL, "msg must be exactly 32 bytes long"));
-    return NULL;
-  }
+  size_t len_msg = 0;
+  char* msg = NULL;
+  GS_GET_DATA(msg, env, args[0], &len_msg);
 
-  size_t len_bsn;
-  char* bsn = getData(env, args[1], &len_bsn);
-  if (len_bsn != 32) {
-    NAPI_CALL(napi_throw_error(env, NULL, "bsn must be exactly 32 bytes long"));
-    return NULL;
-  }
+  size_t len_bsn = 0;
+  char* bsn = NULL;
+  GS_GET_DATA(bsn, env, args[1], &len_bsn);
 
   char buf[1024];
   int out_len = sizeof(buf);
@@ -351,38 +328,42 @@ napi_value Verify(napi_env env, napi_callback_info info) {
   size_t argc = 3;
   napi_value args[3];
   napi_value jsthis;
-  NAPI_CALL(napi_get_cb_info(env, info, &argc, args, &jsthis, NULL));
+  NAPI_GET_ARGS(3, env, info, argc, args, jsthis);
   GroupSigner* obj;
   NAPI_CALL(napi_unwrap(env, jsthis, (void**)(&obj)));
 
-  size_t len_msg;
-  char* msg = getData(env, args[0], &len_msg);
-  if (len_msg != 32) {
-    NAPI_CALL(napi_throw_error(env, NULL, "msg must be exactly 32 bytes long"));
-    return NULL;
+  size_t len_msg = 0;
+  char* msg = NULL;
+  GS_GET_DATA(msg, env, args[0], &len_msg);
+
+  size_t len_bsn = 0;
+  char* bsn = NULL;
+  GS_GET_DATA(bsn, env, args[1], &len_bsn);
+
+  size_t len_sig = 0;
+  char* sig = NULL;
+  GS_GET_DATA(sig, env, args[2], &len_sig);
+
+  int retcode = GS_verify(obj->state, msg, len_msg, bsn, len_bsn, sig, len_sig);
+  if (retcode == GS_success()) {
+    return getBoolean(env, true);
   }
-
-  size_t len_bsn;
-  char* bsn = getData(env, args[1], &len_bsn);
-  if (len_bsn != 32) {
-    NAPI_CALL(napi_throw_error(env, NULL, "bsn must be exactly 32 bytes long"));
-    return NULL;
+  if (retcode == GS_failure()) {
+    return getBoolean(env, false);
   }
-
-  size_t len_sig;
-  char* sig = getData(env, args[2], &len_sig);
-
-  return getBoolean(env, GS_verify(obj->state, msg, len_msg, bsn, len_bsn, sig, len_sig) == 1);
+  NAPI_CALL(napi_throw_error(env, NULL, GS_error(retcode)));
+  return NULL;
 }
 
 napi_value GetSignatureTag(napi_env env, napi_callback_info info) {
   size_t argc = 1;
   napi_value args[1];
   napi_value jsthis;
-  NAPI_CALL(napi_get_cb_info(env, info, &argc, args, &jsthis, NULL));
+  NAPI_GET_ARGS(1, env, info, argc, args, jsthis);
 
-  size_t len_sig;
-  char* sig = getData(env, args[0], &len_sig);
+  size_t len_sig = 0;
+  char* sig = NULL;
+  GS_GET_DATA(sig, env, args[0], &len_sig);
 
   char buf[1024];
   int out_len = sizeof(buf);
@@ -394,16 +375,16 @@ napi_value GetSignatureTag(napi_env env, napi_callback_info info) {
   return out_buf;
 }
 
-napi_value GetUserPrivKey(napi_env env, napi_callback_info info) {
+napi_value GetUserCredentials(napi_env env, napi_callback_info info) {
   size_t argc = 0;
   napi_value jsthis;
-  NAPI_CALL(napi_get_cb_info(env, info, &argc, NULL, &jsthis, NULL));
+  NAPI_GET_ARGS(0, env, info, argc, NULL, jsthis);
   GroupSigner* obj;
   NAPI_CALL(napi_unwrap(env, jsthis, (void**)(&obj)));
 
   char buf[1024];
   int out_len = sizeof(buf);
-  GS_CALL(GS_exportUserPrivKey(obj->state, buf, &out_len))
+  GS_CALL(GS_exportUserCredentials(obj->state, buf, &out_len));
 
   napi_value out_buf;
   NAPI_CALL(napi_create_buffer_copy(
@@ -411,43 +392,42 @@ napi_value GetUserPrivKey(napi_env env, napi_callback_info info) {
   return out_buf;
 }
 
-napi_value SetUserPrivKey(napi_env env, napi_callback_info info) {
+napi_value SetUserCredentials(napi_env env, napi_callback_info info) {
   size_t argc = 1;
   napi_value args[1];
   napi_value jsthis;
-  NAPI_CALL(napi_get_cb_info(env, info, &argc, args, &jsthis, NULL));
+  NAPI_GET_ARGS(1, env, info, argc, args, jsthis);
   GroupSigner* obj;
   NAPI_CALL(napi_unwrap(env, jsthis, (void**)(&obj)));
 
-  size_t len;
-  char* data = getData(env, args[0], &len);
+  size_t len = 0;
+  char* data = NULL;
+  GS_GET_DATA(data, env, args[0], &len);
 
-  GS_CALL(GS_loadUserPrivKey(obj->state, data, len))
+  GS_CALL(GS_loadUserCredentials(obj->state, data, len));
 
   return getUndefined(env);
 }
 
-napi_value StartJoinStatic(napi_env env, napi_callback_info info) {
+napi_value StartJoin(napi_env env, napi_callback_info info) {
   size_t argc = 1;
   napi_value args[1];
   napi_value jsthis;
-  NAPI_CALL(napi_get_cb_info(env, info, &argc, args, &jsthis, NULL));
+  NAPI_GET_ARGS(1, env, info, argc, args, jsthis);
+
   GroupSigner* obj;
   NAPI_CALL(napi_unwrap(env, jsthis, (void**)(&obj)));
 
-  size_t len;
-  char* data = getData(env, args[0], &len);
-  if (len != 32) {
-    NAPI_CALL(napi_throw_error(env, NULL, "Challenge must be exactly 32 bytes long"));
-    return NULL;
-  }
+  size_t len = 0;
+  char* data = NULL;
+  GS_GET_DATA(data, env, args[0], &len);
 
   char bufgsk[1024];
   int outgsk_len = sizeof(bufgsk);
 
   char buf[1024];
   int out_len = sizeof(buf);
-  GS_CALL(GS_startJoinStatic(obj->state, data, len, bufgsk, &outgsk_len, buf, &out_len));
+  GS_CALL(GS_startJoin(obj->state, data, len, bufgsk, &outgsk_len, buf, &out_len));
 
   napi_value outgsk_buf;
   napi_value out_buf;
@@ -463,24 +443,27 @@ napi_value StartJoinStatic(napi_env env, napi_callback_info info) {
   return out_obj;
 }
 
-napi_value FinishJoinStatic(napi_env env, napi_callback_info info) {
+napi_value FinishJoin(napi_env env, napi_callback_info info) {
   size_t argc = 3;
   napi_value args[3];
   napi_value jsthis;
-  NAPI_CALL(napi_get_cb_info(env, info, &argc, args, &jsthis, NULL));
+  NAPI_GET_ARGS(3, env, info, argc, args, jsthis);
 
-  size_t len_publickey;
-  char* publickey = getData(env, args[0], &len_publickey);
+  size_t len_publickey = 0;
+  char* publickey = NULL;
+  GS_GET_DATA(publickey, env, args[0], &len_publickey);
 
-  size_t len_gsk;
-  char* gsk = getData(env, args[1], &len_gsk);
+  size_t len_gsk = 0;
+  char* gsk = NULL;
+  GS_GET_DATA(gsk, env, args[1], &len_gsk);
 
-  size_t len_join;
-  char* join = getData(env, args[2], &len_join);
+  size_t len_join = 0;
+  char* join = NULL;
+  GS_GET_DATA(join, env, args[2], &len_join);
 
   char buf[1024];
   int out_len = sizeof(buf);
-  GS_CALL(GS_finishJoinStatic(publickey, len_publickey, gsk, len_gsk, join, len_join, buf, &out_len));
+  GS_CALL(GS_finishJoin(publickey, len_publickey, gsk, len_gsk, join, len_join, buf, &out_len));
 
   napi_value out_buf;
   NAPI_CALL(napi_create_buffer_copy(
@@ -503,16 +486,14 @@ napi_value Init(napi_env env, napi_value exports) {
     DECLARE_NAPI_METHOD("getGroupPrivKey", GetGroupPrivKey),
     DECLARE_NAPI_METHOD("setGroupPubKey", SetGroupPubKey),
     DECLARE_NAPI_METHOD("setGroupPrivKey", SetGroupPrivKey),
-    DECLARE_NAPI_METHOD("startJoin", StartJoin),
     DECLARE_NAPI_METHOD("processJoin", ProcessJoin),
-    DECLARE_NAPI_METHOD("finishJoin", FinishJoin),
     DECLARE_NAPI_METHOD("sign", Sign),
     DECLARE_NAPI_METHOD("verify", Verify),
     DECLARE_NAPI_METHOD("getSignatureTag", GetSignatureTag),
-    DECLARE_NAPI_METHOD("getUserPrivKey", GetUserPrivKey),
-    DECLARE_NAPI_METHOD("setUserPrivKey", SetUserPrivKey),
-    DECLARE_NAPI_METHOD("startJoinStatic", StartJoinStatic),
-    DECLARE_NAPI_METHOD("finishJoinStatic", FinishJoinStatic),
+    DECLARE_NAPI_METHOD("getUserCredentials", GetUserCredentials),
+    DECLARE_NAPI_METHOD("setUserCredentials", SetUserCredentials),
+    DECLARE_NAPI_METHOD("startJoin", StartJoin),
+    DECLARE_NAPI_METHOD("finishJoin", FinishJoin),
 
     DECLARE_NAPI_STATIC("_version", version),
     DECLARE_NAPI_STATIC("_big", big),
@@ -529,3 +510,7 @@ napi_value Init(napi_env env, napi_value exports) {
 }
 
 NAPI_MODULE(NODE_GYP_MODULE_NAME, Init)
+
+#undef GS_STR
+
+#undef GS_STR_HELPER

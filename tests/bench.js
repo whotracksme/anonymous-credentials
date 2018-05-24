@@ -2,8 +2,8 @@ const expect = require('chai').expect;
 
 const testModules = {
   native: '../lib/index',
-  wasm: '../dist/group-sign-wasm',
-  asmjs: '../dist/group-sign-asmjs',
+  wasm: '../lib/wasm',
+  asmjs: '../lib/asmjs',
 };
 
 function time(fn) {
@@ -12,7 +12,7 @@ function time(fn) {
   return Date.now() - t;
 }
 
-function doTests(name, { getGroupSigner }) {
+function doTests(name, getGroupSigner) {
   function log(...args) {
     console.log(name, ...args);
   }
@@ -34,10 +34,10 @@ function doTests(name, { getGroupSigner }) {
     const client = new GroupSigner();
     client.seed(seed2);
     const challenge = new Uint8Array(32);
-    const { gsk, joinmsg } = client.startJoinStatic(challenge);
+    const { gsk, joinmsg } = client.startJoin(challenge);
     const joinresp = server.processJoin(joinmsg, challenge);
-    const credentials = client.finishJoinStatic(server.getGroupPubKey(), gsk, joinresp);
-    client.setUserPrivKey(credentials);
+    const credentials = client.finishJoin(server.getGroupPubKey(), gsk, joinresp);
+    client.setUserCredentials(credentials);
 
     const N = 10;
     const msg = new Uint8Array(32);
