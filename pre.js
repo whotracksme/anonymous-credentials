@@ -8,19 +8,7 @@ function _arrayToPtr(data, ptr) {
   return ptr;
 }
 
-var initPromise = new Promise(function(resolve, reject) {
-  var t = setTimeout(function() {
-    reject(new Error('group-signer init timed out'));
-  }, 30 * 1000);
-
-  // Reject initialization after 30 seconds
-  Module.postRun = (Module.postRun || []).concat(function() {
-    clearTimeout(t);
-    resolve();
-  });
-});
-
-function GroupSignManager() {
+function GroupSigner() {
   this.buffers = [];
   this._makeBindings();
 
@@ -31,21 +19,39 @@ function GroupSignManager() {
   Module._GS_destroyState(state);
 }
 
-GroupSignManager.prototype._getBuffer = function() {
+function initStaticMembers() {
+  GroupSigner._version = UTF8ToString(Module._GS_version());
+  GroupSigner._big = UTF8ToString(Module._GS_big());
+  GroupSigner._field = UTF8ToString(Module._GS_field());
+  GroupSigner._curve = UTF8ToString(Module._GS_curve());
+}
+
+if (Module['calledRun']) {
+    initStaticMembers();
+  } else {
+    var old = Module['onRuntimeInitialized'];
+    Module['onRuntimeInitialized'] = function() {
+      if (old) old();
+      initStaticMembers();
+    };
+}
+
+
+GroupSigner.prototype._getBuffer = function() {
   // TODO: reduce the conservative upper bound BUFFER_SIZE
   const buffer = _malloc(BUFFER_SIZE);
   this.buffers.push(buffer);
   return buffer;
 }
 
-GroupSignManager.prototype._freeBuffers = function() {
+GroupSigner.prototype._freeBuffers = function() {
   this.buffers.forEach(function(buffer) {
     _free(buffer);
   });
   this.buffers = [];
 }
 
-GroupSignManager.prototype._updateState = function(state) {
+GroupSigner.prototype._updateState = function(state) {
   // TODO: don't allocate every time
   this.state = (new Uint8Array(
     HEAPU8.buffer,
@@ -54,10 +60,10 @@ GroupSignManager.prototype._updateState = function(state) {
   )).slice();
 }
 
-GroupSignManager.prototype._makeBindings = function() {
+GroupSigner.prototype._makeBindings = function() {
   var self = this;
   function _(func, inputs, output, context) {
-    inputs = inputs === undefined ? [] : inputs;
+    inputs = inputs === undefined ? 0 : inputs;
     output = output === undefined ? false : output;
     context = context === undefined ? true : context;
 
@@ -65,26 +71,22 @@ GroupSignManager.prototype._makeBindings = function() {
       try {
         var state = _arrayToPtr(self.state, self._getBuffer());
         var args = Array.prototype.slice.call(arguments);
-        if (args.length !== inputs.length) {
-          throw new Error('Args num mismatch');
+        if (args.length !== inputs) {
+          throw new Error('expected ' + inputs + ' arguments');
         }
         if (!args.every(function(arg) { return arg instanceof Uint8Array; })) {
-          throw new Error('Args must be Uint8Array');
+          throw new Error('input data must be uint8array');
         }
 
         var funcArgs = [];
         if (context) {
           funcArgs.push(state);
         }
-        inputs.forEach(function(size, i) {
-          if (size && args[i].length !== size) {
-            throw new Error('Args size mismatch');
-          }
-
+        for (var i = 0; i < inputs; ++i) {
           var ptr = _arrayToPtr(args[i], self._getBuffer());
           funcArgs.push(ptr);
           funcArgs.push(args[i].length);
-        });
+        }
         if (output === 'array') {
           var ptr = self._getBuffer();
           setValue(ptr, BUFFER_SIZE - 4, 'i32');
@@ -107,33 +109,36 @@ GroupSignManager.prototype._makeBindings = function() {
 
         // TODO: we should probably have a way to check if there was an error for verify
         if (output === 'boolean') {
-          return res === 1;
-        } else {
-          if (res !== 1) {
-            throw new Error('Internal error');
+          if (res === Module._GS_success()) {
+            return true;
+          } else if (res === Module._GS_failure()) {
+            return false;
           }
-          if (output === 'joinstatic') {
-            var ptrjoinmsg = funcArgs[funcArgs.length - 1];
-            var ptrgsk = funcArgs[funcArgs.length - 3];
-            var gsk = (new Uint8Array(
-              HEAPU8.buffer,
-              ptrgsk + 4,
-              getValue(ptrgsk, 'i32')
-            )).slice();
-            var joinmsg = (new Uint8Array(
-              HEAPU8.buffer,
-              ptrjoinmsg + 4,
-              getValue(ptrjoinmsg, 'i32')
-            )).slice();
-            return { gsk: gsk, joinmsg: joinmsg };
-          } else if (output) {
-            var ptr = funcArgs[funcArgs.length - 1];
-            return (new Uint8Array(
-              HEAPU8.buffer,
-              ptr + 4,
-              getValue(ptr, 'i32')
-            )).slice();
-          }
+        }
+        if (res !== Module._GS_success()) {
+          throw new Error(UTF8ToString(Module._GS_error(res)));
+        }
+        if (output === 'joinstatic') {
+          var ptrjoinmsg = funcArgs[funcArgs.length - 1];
+          var ptrgsk = funcArgs[funcArgs.length - 3];
+          var gsk = (new Uint8Array(
+            HEAPU8.buffer,
+            ptrgsk + 4,
+            getValue(ptrgsk, 'i32')
+          )).slice();
+          var joinmsg = (new Uint8Array(
+            HEAPU8.buffer,
+            ptrjoinmsg + 4,
+            getValue(ptrjoinmsg, 'i32')
+          )).slice();
+          return { gsk: gsk, joinmsg: joinmsg };
+        } else if (output) {
+          var ptr = funcArgs[funcArgs.length - 1];
+          return (new Uint8Array(
+            HEAPU8.buffer,
+            ptr + 4,
+            getValue(ptr, 'i32')
+          )).slice();
         }
       } finally {
         this._freeBuffers();
@@ -141,32 +146,20 @@ GroupSignManager.prototype._makeBindings = function() {
     }
   }
 
-  this.seed = _('_GS_seed', [0]);
+  this.seed = _('_GS_seed', 1);
   this.setupGroup = _('_GS_setupGroup');
-  this.getGroupPubKey = _('_GS_exportGroupPubKey', [], 'array');
-  this.getGroupPrivKey = _('_GS_exportGroupPrivKey', [], 'array');
-  this.getUserPrivKey = _('_GS_exportUserPrivKey', [], 'array');
-  this.setGroupPubKey = _('_GS_loadGroupPubKey', [0]);
-  this.setGroupPrivKey = _('_GS_loadGroupPrivKey', [0]);
-  this.setUserPrivKey = _('_GS_loadUserPrivKey', [0]);
-  this.startJoin = _('_GS_startJoin', [32], 'array');
-  this.processJoin = _('_GS_processJoin', [0, 32], 'array');
-  this.finishJoin = _('_GS_finishJoin', [0]);
-  this.sign = _('_GS_sign', [32, 32], 'array');
-  this.verify = _('_GS_verify', [32, 32, 0], 'boolean');
-  this.getSignatureTag = _('_GS_getSignatureTag', [0], 'array', false);
-  this.startJoinStatic = _('_GS_startJoinStatic', [32], 'joinstatic');
-  this.finishJoinStatic = _('_GS_finishJoinStatic', [0, 0, 0], 'array', false);
+  this.getGroupPubKey = _('_GS_exportGroupPubKey', 0, 'array');
+  this.getGroupPrivKey = _('_GS_exportGroupPrivKey', 0, 'array');
+  this.getUserCredentials = _('_GS_exportUserCredentials', 0, 'array');
+  this.setGroupPubKey = _('_GS_loadGroupPubKey', 1);
+  this.setGroupPrivKey = _('_GS_loadGroupPrivKey', 1);
+  this.setUserCredentials = _('_GS_loadUserCredentials', 1);
+  this.processJoin = _('_GS_processJoin', 2, 'array');
+  this.sign = _('_GS_sign', 2, 'array');
+  this.verify = _('_GS_verify', 3, 'boolean');
+  this.getSignatureTag = _('_GS_getSignatureTag', 1, 'array', false);
+  this.startJoin = _('_GS_startJoin', 1, 'joinstatic');
+  this.finishJoin = _('_GS_finishJoin', 3, 'array', false);
 }
 
-Module.getGroupSigner = function () {
-  return initPromise.then(function () {
-    // Setting static properties
-    GroupSignManager._version = UTF8ToString(Module._GS_version());
-    GroupSignManager._big = UTF8ToString(Module._GS_big());
-    GroupSignManager._field = UTF8ToString(Module._GS_field());
-    GroupSignManager._curve = UTF8ToString(Module._GS_curve());
-
-    return GroupSignManager;
-  });
-}
+Module.GroupSigner = GroupSigner;

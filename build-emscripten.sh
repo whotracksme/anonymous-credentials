@@ -55,15 +55,16 @@ EMFLAGS=${!EMFLAGS}
   emcc ${EMFLAGS} \
     --pre-js pre.js \
     -s SINGLE_FILE=1 \
+    -s MODULARIZE=1 \
     -s NO_EXIT_RUNTIME=1 \
     -s ASSERTIONS=$EMCC_ASSERTIONS \
     $EMCC_FLAGS \
     -std=c11 -Wall -Wextra -Wno-strict-prototypes -Wunused-value -Wcast-align \
     -Wunused-variable -Wundef -Wformat-security -Wshadow \
     -o "$DISTFOLDER/group-sign-$EMNAME.js" \
-    -L$BUILDFOLDER/milagro-crypto-c/core/src -Wl,-rpath,$BUILDFOLDER/milagro-crypto-c/core/src \
+    -L$BUILDFOLDER/milagro-crypto-c/core -Wl,-rpath,$BUILDFOLDER/milagro-crypto-c/core \
     -rdynamic \
-    $BUILDFOLDER/core/src/libgroupsign_$CURVE.a \
+    $BUILDFOLDER/core/libgroupsign_$CURVE.a \
     $BUILDFOLDER/milagro-crypto-c/lib/libamcl_curve_$CURVE.a \
     $BUILDFOLDER/milagro-crypto-c/lib/libamcl_core.a \
     $BUILDFOLDER/milagro-crypto-c/lib/libamcl_pairing_$CURVE.a \
@@ -73,24 +74,23 @@ EMFLAGS=${!EMFLAGS}
        '_GS_setupGroup', \
        '_GS_loadGroupPrivKey', \
        '_GS_loadGroupPubKey', \
-       '_GS_startJoin', \
-       '_GS_finishJoin', \
-       '_GS_loadUserPrivKey', \
+       '_GS_loadUserCredentials', \
        '_GS_exportGroupPrivKey', \
        '_GS_exportGroupPubKey', \
-       '_GS_exportUserPrivKey', \
+       '_GS_exportUserCredentials', \
        '_GS_processJoin', \
        '_GS_sign', \
        '_GS_verify', \
        '_GS_getSignatureTag', \
        '_GS_destroyState', \
-       '_GS_startJoinStatic', \
-       '_GS_finishJoinStatic', \
+       '_GS_startJoin', \
+       '_GS_finishJoin', \
        '_GS_version', \
        '_GS_big', \
        '_GS_field', \
        '_GS_curve', \
-       '_GS_getStateSize' \
-       ]" \
-)
+       '_GS_success', \
+       '_GS_failure', \
+       '_GS_error', \
+       '_GS_getStateSize']")
 done
