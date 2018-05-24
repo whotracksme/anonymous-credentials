@@ -62,9 +62,9 @@ EMFLAGS=${!EMFLAGS}
     -std=c11 -Wall -Wextra -Wno-strict-prototypes -Wunused-value -Wcast-align \
     -Wunused-variable -Wundef -Wformat-security -Wshadow \
     -o "$DISTFOLDER/group-sign-$EMNAME.js" \
-    -L$BUILDFOLDER/milagro-crypto-c/core/src -Wl,-rpath,$BUILDFOLDER/milagro-crypto-c/core/src \
+    -L$BUILDFOLDER/milagro-crypto-c/core -Wl,-rpath,$BUILDFOLDER/milagro-crypto-c/core \
     -rdynamic \
-    $BUILDFOLDER/core/src/libgroupsign_$CURVE.a \
+    $BUILDFOLDER/core/libgroupsign_$CURVE.a \
     $BUILDFOLDER/milagro-crypto-c/lib/libamcl_curve_$CURVE.a \
     $BUILDFOLDER/milagro-crypto-c/lib/libamcl_core.a \
     $BUILDFOLDER/milagro-crypto-c/lib/libamcl_pairing_$CURVE.a \

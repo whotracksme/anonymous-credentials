@@ -39,4 +39,4 @@ set_property(CACHE AMCL_CURVE PROPERTY STRINGS ${AMCL_CURVE_NAMES})
 string(REPLACE "," ";" AMCL_CURVE "${AMCL_CURVE}")
 log(AMCL_CURVE)
 
-add_subdirectory(core/src)
+add_subdirectory(core)
