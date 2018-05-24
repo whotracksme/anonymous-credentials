@@ -70,7 +70,6 @@ EMFLAGS=${!EMFLAGS}
     $BUILDFOLDER/milagro-crypto-c/lib/libamcl_pairing_$CURVE.a \
     -s EXPORTED_FUNCTIONS="[\
        '_GS_seed', \
-       '_GS_createState', \
        '_GS_setupGroup', \
        '_GS_loadGroupPrivKey', \
        '_GS_loadGroupPubKey', \
@@ -82,7 +81,7 @@ EMFLAGS=${!EMFLAGS}
        '_GS_sign', \
        '_GS_verify', \
        '_GS_getSignatureTag', \
-       '_GS_destroyState', \
+       '_GS_initState', \
        '_GS_startJoin', \
        '_GS_finishJoin', \
        '_GS_version', \
