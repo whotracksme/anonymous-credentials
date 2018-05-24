@@ -1,4 +1,5 @@
 #pragma once
+#include "stddef.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,8 +23,7 @@ enum ReturnCodes {
   GS_INVALID_SIGNATURE
 };
 
-void* GS_createState();
-void GS_destroyState(void* state);
+void GS_initState(void* state);
 int GS_seed(void* state, char* seed, int seed_length);
 int GS_setupGroup(void* state);
 int GS_loadGroupPrivKey(void* state, char* data, int len);
@@ -49,7 +49,7 @@ int GS_processJoin(void* state, char* joinmsg, int joinmsg_len, char* challenge,
 int GS_sign(void* state, char* msg, int msg_len, char* bsn, int bsn_len, char* signature, int* len);
 int GS_verify(void* state, char* msg, int msg_len, char* bsn, int bsn_len, char* signature, int len);
 int GS_getSignatureTag(char* signature, int sig_len, char* tag, int* tag_len);
-int GS_getStateSize();
+size_t GS_getStateSize();
 const char* GS_version();
 const char* GS_big();
 const char* GS_field();

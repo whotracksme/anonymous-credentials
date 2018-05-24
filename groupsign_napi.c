@@ -2,8 +2,8 @@
 #include <assert.h>
 #include <stdlib.h>
 
-extern void* GS_createState();
-extern void GS_destroyState(void* state);
+extern size_t GS_getStateSize();
+extern void GS_initState(void* state);
 
 extern int GS_seed(void* state, char* seed, int seed_length);
 extern int GS_setupGroup(void* state);
@@ -87,7 +87,7 @@ typedef struct {
 
 void Destructor(napi_env env, void* nativeObject, void* finalize_hint) {
   GroupSigner* obj = (GroupSigner*) nativeObject;
-  GS_destroyState(obj->state);
+  free(obj->state);
   napi_delete_reference(obj->env_, obj->wrapper_);
   free(nativeObject);
 }
@@ -105,7 +105,8 @@ napi_value New(napi_env env, napi_callback_info info) {
     NAPI_CALL(napi_get_cb_info(env, info, &argc, args, &jsthis, NULL));
 
     GroupSigner* obj = (GroupSigner *) malloc(sizeof(GroupSigner));
-    obj->state = GS_createState();
+    obj->state = malloc(GS_getStateSize());
+    GS_initState(obj->state);
     obj->env_ = env;
 
     NAPI_CALL(napi_wrap(env,

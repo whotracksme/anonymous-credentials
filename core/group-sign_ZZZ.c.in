@@ -876,15 +876,10 @@ static int verify(char *msg, int msg_len, char *bsn, int bsn_len, struct Signatu
 
 
 // Start - Operations that modify internal state
-void* GS_createState() {
-  GS_State* state = malloc(sizeof(GS_State));
+void GS_initState(void* rawstate) {
+  GS_State* state = (GS_State*)rawstate;
   state->state = 0;
   log_state(state->state);
-  return state;
-}
-
-void GS_destroyState(void* rawstate) {
-  free(rawstate);
 }
 
 int GS_seed(void* rawstate, char* seed, int seed_length) {
@@ -1141,7 +1136,7 @@ int GS_getSignatureTag(char* signature, int sig_len, char* tag, int* tag_len) {
   return GS_RETURN_SUCCESS;
 }
 
-int GS_getStateSize() {
+size_t GS_getStateSize() {
   return sizeof(GS_State);
 }
 

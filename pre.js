@@ -14,9 +14,10 @@ function GroupSigner() {
 
   // Avoid storing state in Module heap
   this.stateSize = Module._GS_getStateSize();
-  var state = Module._GS_createState();
+  var state = _malloc(this.stateSize);
+  Module._GS_initState(state);
   this._updateState(state);
-  Module._GS_destroyState(state);
+  _free(state);
 }
 
 function initStaticMembers() {
