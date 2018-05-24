@@ -1,11 +1,11 @@
 const expect = require('chai').expect;
 
 const testModules = {
-  // auto: '../lib/index',
-  // wasm: '../lib/wasm',
-  // asmjs: '../lib/asmjs',
+  auto: '../lib/index',
+  wasm: '../lib/wasm',
+  asmjs: '../lib/asmjs',
   native: '../lib/native',
-  // emscripten: '../lib/emscripten',
+  emscripten: '../lib/emscripten',
 };
 
 async function doTests(name, moduleName) {
