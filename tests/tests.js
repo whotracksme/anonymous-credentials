@@ -5,7 +5,7 @@ const testModules = {
   wasm: '../lib/wasm',
   asmjs: '../lib/asmjs',
   native: '../lib/native',
-  emscripten: '../lib/emscripten',
+  web: '../lib/web',
 };
 
 async function doTests(name, moduleName) {

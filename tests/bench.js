@@ -1,7 +1,7 @@
 const expect = require('chai').expect;
 
 const testModules = {
-  native: '../lib/index',
+  native: '../lib/native',
   wasm: '../lib/wasm',
   asmjs: '../lib/asmjs',
 };
