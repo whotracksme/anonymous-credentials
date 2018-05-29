@@ -1,0 +1,3 @@
+[submodule "milagro-crypto-c"]
+	path = external/milagro-crypto-c
+	url = git@github.com:cliqz-oss/milagro-crypto-c.git
