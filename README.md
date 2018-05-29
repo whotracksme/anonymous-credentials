@@ -1,4 +1,4 @@
-# group-sign
+# anonymous-credentials
 
 Anonymous credentials for server (NodeJS) and browser (WebAssembly, asm.js). Allows an issuer (typically a server) to issue (private) credentials to a user so that the
 user can sign messages proving possession of such credentials, but in a way that signatures performed with the same credentials cannot be linked together. Optionally, signatures
