@@ -4,8 +4,7 @@ Anonymous credentials for server (NodeJS) and browser (WebAssembly, asm.js). All
 user can sign messages proving possession of such credentials, but in a way that signatures performed with the same credentials cannot be linked together. Optionally, signatures
 can have a ***basename***, which makes two signatures done with the same credentials linkable ***if and only if*** the basenames used in each are the same.
 
-Even if the name of the package is `group-sign`, there is no way to open signatures (reveal the identity of the signer) as in the academic
-definition of Group Signatures. The concrete implemented operations are the ones described in https://eprint.iacr.org/2015/1246
+The concrete implemented operations are the ones described in https://eprint.iacr.org/2015/1246
 (based on Camenisch-Lysyanskaya signatures), but without a Trusted Platform Module in the ***join*** operation (therefore, only software).
 
 For the underlying elliptic curve bilinear pairing primitives, we use [Apache Milagro Crypto Library](https://github.com/milagro-crypto/milagro-crypto-c).
@@ -13,33 +12,32 @@ Even if the core implementation is in C, we target server (NodeJS native module)
  a JavaScript environment. Therefore, only the JavaScript API is documented.
 
 ## Usage
-    npm install group-sign
 
 There are three build targets: NodeJS native module, WebAssembly and asm.js. The node native module is faster than the
  WebAssembly version, but it is not built by default. See [Building](#building) for instructions on this.
 
 ```js
-const getGroupSigner = require('group-sign'); // Returns the first working version of [native, web]
+const getCredentialManager = require('anonymous-credentials'); // Returns the first working version of [native, web]
 
 // Requiring concrete versions
-const getGroupSigner = require('group-sign/native'); // NodeJS native module
-const getGroupSigner = require('group-sign/wasm'); // WebAssembly version
-const getGroupSigner = require('group-sign/asmjs'); // asm.js (slower fallback if WebAssembly is not supported)
-const getGroupSigner = require('group-sign/web'); // Chooses between wasm or asm.js, depending on the environment support
+const getCredentialManager = require('anonymous-credentials/native'); // NodeJS native module
+const getCredentialManager = require('anonymous-credentials/wasm'); // WebAssembly version
+const getCredentialManager = require('anonymous-credentials/asmjs'); // asm.js (slower fallback if WebAssembly is not supported)
+const getCredentialManager = require('anonymous-credentials/web'); // Chooses between wasm or asm.js, depending on the environment support
 ```
 
-Once required, we can create instances of GroupSigner class:
+Once required, we can create instances of CredentialManager class:
 
 ```js
 async function myfunc() {
   ...
-  // GroupSigner class must be obtained asynchronously.
-  const GroupSigner = await getGroupSigner();
+  // CredentialManager class must be obtained asynchronously.
+  const CredentialManager = await getCredentialManager();
 
   // Same class can be used for three different roles
-  const signer = new GroupSigner();
-  const issuer = new GroupSigner();
-  const verifier = new GroupSigner();
+  const signer = new CredentialManager();
+  const issuer = new CredentialManager();
+  const verifier = new CredentialManager();
   ...
 }
 ```
@@ -76,16 +74,16 @@ All parameters are ***Uint8Array***. If not specified, assume ***undefined*** is
 ## Building
 
 The C code of the library that is used for all three build targets can be found in `core`.
-This is used in `groupsign_napi.c` to create a NodeJS module via [N-API](https://nodejs.org/api/n-api.html).
+This is used in `addon_napi.c` to create a NodeJS module via [N-API](https://nodejs.org/api/n-api.html).
 The Emscripten bindings to build WebAssembly and asm.js versions are in `pre.js`.
 
 To build, first checkout dependencies:
 
-    (cd node_modules/group-sign && git submodule update --init --recursive)
+    git submodule update --init --recursive
 
 NodeJS native module (clang and cmake required):
 
-    npm explore group-sign -- npm run native-install
+    npm run native-install
 
 WebAssembly and asm.js versions (docker without sudo required):
 
