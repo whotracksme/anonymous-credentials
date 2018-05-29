@@ -1,3 +1,4 @@
+'use strict';
 const expect = require('chai').expect;
 
 const testModules = {
@@ -8,7 +9,7 @@ const testModules = {
   web: '../lib/web',
 };
 
-async function doTests(name, moduleName) {
+function doTests(name, moduleName) {
   const seed1 = new Uint8Array(128);
   const seed2 = new Uint8Array(128);
 
