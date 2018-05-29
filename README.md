@@ -74,7 +74,7 @@ All parameters are ***Uint8Array***. If not specified, assume ***undefined*** is
 ## Building
 
 The C code of the library that is used for all three build targets can be found in `core`.
-This is used in `addon_napi.c` to create a NodeJS module via [N-API](https://nodejs.org/api/n-api.html).
+This is used in `groupsign_napi.c` to create a NodeJS module via [N-API](https://nodejs.org/api/n-api.html).
 The Emscripten bindings to build WebAssembly and asm.js versions are in `pre.js`.
 
 To build, first checkout dependencies:
