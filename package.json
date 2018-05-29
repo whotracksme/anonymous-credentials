@@ -1,22 +1,18 @@
 {
-  "name": "group-sign",
-  "version": "1.0.0",
-  "description": "",
-  "main": "lib/index.js",
+  "name": "@cliqz/anonymous-credentials",
+  "version": "0.1.0",
+  "description": "Anonymous credentials library",
+  "main": "./lib/index.js",
   "scripts": {
     "test": "mocha --timeout 10000 tests/tests.js",
     "native-install": "bash build-native.sh && node-gyp rebuild"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cliqz/group-sign.git"
+    "url": "git@github.com:cliqz-oss/anonymous-credentials.git"
   },
-  "author": "",
+  "author": "Cliqz",
   "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/cliqz/group-sign/issues"
-  },
-  "homepage": "https://github.com/cliqz/group-sign#readme",
   "dependencies": {
     "bindings": "1.3.0"
   },
