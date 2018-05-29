@@ -20,10 +20,10 @@ There are three build targets: NodeJS native module, WebAssembly and asm.js. The
 const getCredentialManager = require('anonymous-credentials'); // Returns the first working version of [native, web]
 
 // Requiring concrete versions
-const getCredentialManager = require('anonymous-credentials/native'); // NodeJS native module
-const getCredentialManager = require('anonymous-credentials/wasm'); // WebAssembly version
-const getCredentialManager = require('anonymous-credentials/asmjs'); // asm.js (slower fallback if WebAssembly is not supported)
-const getCredentialManager = require('anonymous-credentials/web'); // Chooses between wasm or asm.js, depending on the environment support
+const getCredentialManager = require('anonymous-credentials/lib/native'); // NodeJS native module
+const getCredentialManager = require('anonymous-credentials/lib/wasm'); // WebAssembly version
+const getCredentialManager = require('anonymous-credentials/lib/asmjs'); // asm.js (slower fallback if WebAssembly is not supported)
+const getCredentialManager = require('anonymous-credentials/lib/web'); // Chooses between wasm or asm.js, depending on the environment support
 ```
 
 Once required, we can create instances of CredentialManager class:
