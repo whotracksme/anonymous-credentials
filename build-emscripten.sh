@@ -38,9 +38,9 @@ fi
     emmake make -j $(getconf _NPROCESSORS_ONLN) VERBOSE=1)
 
 name_0="wasm"
-flags_0="-s WASM=1"
+flags_0="-s WASM=1 -s EXPORT_NAME='ModuleWasm'"
 name_1="asmjs"
-flags_1="-s WASM=0"
+flags_1="-s WASM=0 -s EXPORT_NAME='ModuleAsmjs'"
 
 rm -rf $DISTFOLDER;
 
