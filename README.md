@@ -95,6 +95,4 @@ To build everything:
 
 ## Running the tests
 
-    npm test
-
-Note that the native version will fail if the node module was not build.
+    make test
