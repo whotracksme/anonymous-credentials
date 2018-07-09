@@ -1,3 +1,6 @@
+// This limits the size of the Uint8Array inputs.
+// For example, in sign() operation both msg and bsn
+// length must not be greater than BUFFER_SIZE
 var BUFFER_SIZE = 10 * 1024;
 
 function _arrayToPtr(data, ptr) {

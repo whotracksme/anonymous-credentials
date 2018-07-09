@@ -38,7 +38,7 @@ fi
     emmake make -j $(getconf _NPROCESSORS_ONLN) VERBOSE=1)
 
 name_0="wasm"
-flags_0="-s WASM=1 -s EXPORT_NAME='ModuleWasm'"
+flags_0="-s TOTAL_MEMORY=128KB -s TOTAL_STACK=64KB -s WASM=1 -s EXPORT_NAME='ModuleWasm'"
 name_1="asmjs"
 flags_1="-s WASM=0 -s EXPORT_NAME='ModuleAsmjs'"
 
