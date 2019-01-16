@@ -1,5 +1,5 @@
-# sdk-tag-1.38.8-64bit
-FROM trzeci/emscripten@sha256:e709ba53b68dac8c52761cb34c53543643387459d3166e465ed6b8fa2dc281f2
+# sdk-tag-1.38.23-64bit
+FROM trzeci/emscripten@sha256:86cb31ea2c55cfb387e723ef5f473c15a7ed7ccf01c0f9e40d4b9131e1e7a22a
 
 RUN mkdir /group-sign
 COPY . /group-sign
