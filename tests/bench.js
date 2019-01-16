@@ -26,7 +26,7 @@ function doTests(name, getGroupSigner) {
   }
 
   return getGroupSigner().then((s) => {
-    GroupSigner = s;
+    const GroupSigner = s;
 
     const server = new GroupSigner();
     server.seed(seed1);
@@ -40,7 +40,7 @@ function doTests(name, getGroupSigner) {
     const credentials = client.finishJoin(server.getGroupPubKey(), gsk, joinresp);
     client.setUserCredentials(credentials);
 
-    const N = 10;
+    const N = 1000;
     const msg = new Uint8Array(32);
     const bsn = new Uint8Array(32);
     let sig;

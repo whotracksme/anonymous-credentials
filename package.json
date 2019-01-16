@@ -5,6 +5,7 @@
   "main": "./lib/index.js",
   "scripts": {
     "test": "mocha --timeout 10000 --full-trace tests/tests.js",
+    "bench": "mocha --full-trace tests/bench.js",
     "native-install": "bash build-native.sh && node-gyp rebuild"
   },
   "repository": {
