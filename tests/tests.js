@@ -1,5 +1,6 @@
 'use strict';
 const expect = require('chai').expect;
+const crypto = require('crypto');
 
 const testModules = {
   auto: '../lib/index',
@@ -57,27 +58,27 @@ function doTests(name, moduleName) {
       signer.seed(seed1);
       signer.setupGroup();
 
-//      expect(Buffer.from(signer.getGroupPubKey()).toString('base64'))
-//        .to.equal('BUY57Gl3XT/q8dxehyJGzYzqNOhbuHxQVMpOz1ziedEKaKxqTrtPuPb6ql8n5Kb+uZ9uCWmBOha2q++SLW+kpSS+nfBTvnD0o1s2XR2hNyfcVfmGwofjuyKUnkO18LcoEHCb/4SEWHTg/Sb5N55KVzzxx6uGlM8pFOc3a/KkSbAPmjuG2Lq2QXgfD7/Re8CrscsZAKDuj6GfnFQFTAnQXgrZmMIfQBciIwIt8LKqJxFwpT1KYu3QNClKEzvi2aA6IxPC7hbQKMWF0Oj06pIP51ubwFChj++MX7ofGgyLIccMVf5aNjDZomCd+hexbKPMkq0fhKgEDdbKTYIZ5Z/TSiIcamiSzp7/IcHG+m0UhV1tba0YwoU67r6MJvDUCVcdFduOrzj+H9rx/Hctlo9niAgPxKV5hh5hcHWPZYtjXTEAtdJXNRyM+f7W1bXkkR5H5AHQfXY/FDNK5Rl+XQpxjwc47riAlX0KNgE2gjdAz6KnQSdg7JnsUkYUuiOIfzZy');
+      expect(Buffer.from(signer.getGroupPubKey()).toString('base64'))
+        .to.equal('BUY57Gl3XT/q8dxehyJGzYzqNOhbuHxQVMpOz1ziedEKaKxqTrtPuPb6ql8n5Kb+uZ9uCWmBOha2q++SLW+kpSS+nfBTvnD0o1s2XR2hNyfcVfmGwofjuyKUnkO18LcoEHCb/4SEWHTg/Sb5N55KVzzxx6uGlM8pFOc3a/KkSbAPmjuG2Lq2QXgfD7/Re8CrscsZAKDuj6GfnFQFTAnQXgrZmMIfQBciIwIt8LKqJxFwpT1KYu3QNClKEzvi2aA6IxPC7hbQKMWF0Oj06pIP51ubwFChj++MX7ofGgyLIccMVf5aNjDZomCd+hexbKPMkq0fhKgEDdbKTYIZ5Z/TSiIcamiSzp7/IcHG+m0UhV1tba0YwoU67r6MJvDUCVcdHiGXaKnxXk4G6PWvNpNOCvgZ7ClXmz/8eAWYLxxkQoMAtdJXNRyM+f7W1bXkkR5H5AHQfXY/FDNK5Rl+XQpxjxACAmGqKRQYlB+L9wtH/gnTiof24C1B+fWSnOV52aEU');
 
-//      expect(Buffer.from(signer.getGroupPrivKey()).toString('base64'))
-//        .to.equal('BUY57Gl3XT/q8dxehyJGzYzqNOhbuHxQVMpOz1ziedEKaKxqTrtPuPb6ql8n5Kb+uZ9uCWmBOha2q++SLW+kpSS+nfBTvnD0o1s2XR2hNyfcVfmGwofjuyKUnkO18LcoEHCb/4SEWHTg/Sb5N55KVzzxx6uGlM8pFOc3a/KkSbAPmjuG2Lq2QXgfD7/Re8CrscsZAKDuj6GfnFQFTAnQXgrZmMIfQBciIwIt8LKqJxFwpT1KYu3QNClKEzvi2aA6IxPC7hbQKMWF0Oj06pIP51ubwFChj++MX7ofGgyLIccMVf5aNjDZomCd+hexbKPMkq0fhKgEDdbKTYIZ5Z/TSiIcamiSzp7/IcHG+m0UhV1tba0YwoU67r6MJvDUCVcdFduOrzj+H9rx/Hctlo9niAgPxKV5hh5hcHWPZYtjXTEAtdJXNRyM+f7W1bXkkR5H5AHQfXY/FDNK5Rl+XQpxjwc47riAlX0KNgE2gjdAz6KnQSdg7JnsUkYUuiOIfzZyCw436RNE0txZyWtUjZn5Db0aUGZNMWCyNmpt5v/2HxMaMxA4UUPXXIpoZPZ6rgvgJ8SzaXk9gp/ZXqHvXKgAMg==');
+    expect(Buffer.from(signer.getGroupPrivKey()).toString('base64'))
+      .to.equal('BUY57Gl3XT/q8dxehyJGzYzqNOhbuHxQVMpOz1ziedEKaKxqTrtPuPb6ql8n5Kb+uZ9uCWmBOha2q++SLW+kpSS+nfBTvnD0o1s2XR2hNyfcVfmGwofjuyKUnkO18LcoEHCb/4SEWHTg/Sb5N55KVzzxx6uGlM8pFOc3a/KkSbAPmjuG2Lq2QXgfD7/Re8CrscsZAKDuj6GfnFQFTAnQXgrZmMIfQBciIwIt8LKqJxFwpT1KYu3QNClKEzvi2aA6IxPC7hbQKMWF0Oj06pIP51ubwFChj++MX7ofGgyLIccMVf5aNjDZomCd+hexbKPMkq0fhKgEDdbKTYIZ5Z/TSiIcamiSzp7/IcHG+m0UhV1tba0YwoU67r6MJvDUCVcdHiGXaKnxXk4G6PWvNpNOCvgZ7ClXmz/8eAWYLxxkQoMAtdJXNRyM+f7W1bXkkR5H5AHQfXY/FDNK5Rl+XQpxjxACAmGqKRQYlB+L9wtH/gnTiof24C1B+fWSnOV52aEUCw436RNE0txZyWtUjZn5Db0aUGZNMWCyNmpt5v/2HxMaMxA4UUPXXIpoZPZ6rgvgJ8SzaXk9gp/ZXqHvXKgAMg==');
 
-      signer.seed(seed1);
-      signer.setupGroup();
-//      expect(Buffer.from(signer.getGroupPubKey()).toString('base64'))
-//        .to.equal('BUY57Gl3XT/q8dxehyJGzYzqNOhbuHxQVMpOz1ziedEKaKxqTrtPuPb6ql8n5Kb+uZ9uCWmBOha2q++SLW+kpSS+nfBTvnD0o1s2XR2hNyfcVfmGwofjuyKUnkO18LcoEHCb/4SEWHTg/Sb5N55KVzzxx6uGlM8pFOc3a/KkSbAPmjuG2Lq2QXgfD7/Re8CrscsZAKDuj6GfnFQFTAnQXgrZmMIfQBciIwIt8LKqJxFwpT1KYu3QNClKEzvi2aA6IxPC7hbQKMWF0Oj06pIP51ubwFChj++MX7ofGgyLIccMVf5aNjDZomCd+hexbKPMkq0fhKgEDdbKTYIZ5Z/TSiIcamiSzp7/IcHG+m0UhV1tba0YwoU67r6MJvDUCVcdFduOrzj+H9rx/Hctlo9niAgPxKV5hh5hcHWPZYtjXTEAtdJXNRyM+f7W1bXkkR5H5AHQfXY/FDNK5Rl+XQpxjwc47riAlX0KNgE2gjdAz6KnQSdg7JnsUkYUuiOIfzZy');
+    signer.seed(seed1);
+    signer.setupGroup();
+    expect(Buffer.from(signer.getGroupPubKey()).toString('base64'))
+      .to.equal('BUY57Gl3XT/q8dxehyJGzYzqNOhbuHxQVMpOz1ziedEKaKxqTrtPuPb6ql8n5Kb+uZ9uCWmBOha2q++SLW+kpSS+nfBTvnD0o1s2XR2hNyfcVfmGwofjuyKUnkO18LcoEHCb/4SEWHTg/Sb5N55KVzzxx6uGlM8pFOc3a/KkSbAPmjuG2Lq2QXgfD7/Re8CrscsZAKDuj6GfnFQFTAnQXgrZmMIfQBciIwIt8LKqJxFwpT1KYu3QNClKEzvi2aA6IxPC7hbQKMWF0Oj06pIP51ubwFChj++MX7ofGgyLIccMVf5aNjDZomCd+hexbKPMkq0fhKgEDdbKTYIZ5Z/TSiIcamiSzp7/IcHG+m0UhV1tba0YwoU67r6MJvDUCVcdHiGXaKnxXk4G6PWvNpNOCvgZ7ClXmz/8eAWYLxxkQoMAtdJXNRyM+f7W1bXkkR5H5AHQfXY/FDNK5Rl+XQpxjxACAmGqKRQYlB+L9wtH/gnTiof24C1B+fWSnOV52aEU');
 
-//      expect(Buffer.from(signer.getGroupPrivKey()).toString('base64'))
-//        .to.equal('BUY57Gl3XT/q8dxehyJGzYzqNOhbuHxQVMpOz1ziedEKaKxqTrtPuPb6ql8n5Kb+uZ9uCWmBOha2q++SLW+kpSS+nfBTvnD0o1s2XR2hNyfcVfmGwofjuyKUnkO18LcoEHCb/4SEWHTg/Sb5N55KVzzxx6uGlM8pFOc3a/KkSbAPmjuG2Lq2QXgfD7/Re8CrscsZAKDuj6GfnFQFTAnQXgrZmMIfQBciIwIt8LKqJxFwpT1KYu3QNClKEzvi2aA6IxPC7hbQKMWF0Oj06pIP51ubwFChj++MX7ofGgyLIccMVf5aNjDZomCd+hexbKPMkq0fhKgEDdbKTYIZ5Z/TSiIcamiSzp7/IcHG+m0UhV1tba0YwoU67r6MJvDUCVcdFduOrzj+H9rx/Hctlo9niAgPxKV5hh5hcHWPZYtjXTEAtdJXNRyM+f7W1bXkkR5H5AHQfXY/FDNK5Rl+XQpxjwc47riAlX0KNgE2gjdAz6KnQSdg7JnsUkYUuiOIfzZyCw436RNE0txZyWtUjZn5Db0aUGZNMWCyNmpt5v/2HxMaMxA4UUPXXIpoZPZ6rgvgJ8SzaXk9gp/ZXqHvXKgAMg==');
+    expect(Buffer.from(signer.getGroupPrivKey()).toString('base64'))
+      .to.equal('BUY57Gl3XT/q8dxehyJGzYzqNOhbuHxQVMpOz1ziedEKaKxqTrtPuPb6ql8n5Kb+uZ9uCWmBOha2q++SLW+kpSS+nfBTvnD0o1s2XR2hNyfcVfmGwofjuyKUnkO18LcoEHCb/4SEWHTg/Sb5N55KVzzxx6uGlM8pFOc3a/KkSbAPmjuG2Lq2QXgfD7/Re8CrscsZAKDuj6GfnFQFTAnQXgrZmMIfQBciIwIt8LKqJxFwpT1KYu3QNClKEzvi2aA6IxPC7hbQKMWF0Oj06pIP51ubwFChj++MX7ofGgyLIccMVf5aNjDZomCd+hexbKPMkq0fhKgEDdbKTYIZ5Z/TSiIcamiSzp7/IcHG+m0UhV1tba0YwoU67r6MJvDUCVcdHiGXaKnxXk4G6PWvNpNOCvgZ7ClXmz/8eAWYLxxkQoMAtdJXNRyM+f7W1bXkkR5H5AHQfXY/FDNK5Rl+XQpxjxACAmGqKRQYlB+L9wtH/gnTiof24C1B+fWSnOV52aEUCw436RNE0txZyWtUjZn5Db0aUGZNMWCyNmpt5v/2HxMaMxA4UUPXXIpoZPZ6rgvgJ8SzaXk9gp/ZXqHvXKgAMg==');
 
       signer.seed(seed2);
       signer.setupGroup();
-//      expect(Buffer.from(signer.getGroupPubKey()).toString('base64'))
-//        .to.equal('A6Rnm7aewxlszEDU2rfd6dM+w1GppZXfYSF3llh/YNwDBoniR8rxIgWvqeBtEo/GLn2x6VZNPCo2DoVonXLD+wk12dSj9vOPBXocHw24ji8mcm1DrGzQk7miCA6ncw1ZCch1x656rcGoK1kNxh1CiVfh7hLqzwHoYAnl9zVzuWoEOsh2Gv2XQn8io8kH0XCEnEl//87YDe9AM0hpUQBY2BkDnwdYS9p3fJLJmPIsr1cX2xFLYOuGysRvPzw67HRtBvUmNvszK8KzhZwQjEIA+vIhalehDAdPtvIrajQ0rcMURF0+hhoMNozPkmj3eTc19HCoMDP/Xf7mCHRaiU40uAsMVXAquRr8rwJRnTeyO8bOjIuu8JYRFhuLlBovKGYWG8IfTm7jddv4mdEp/kfenUTjaTpI01YWOoAX6EyXmZkLMa5VZgiCeS/dEKkOAPhHjHgAGmpqi8XmaWcYHN1FHwq8Rg89to5W7dqwNrXZXcn/9HJKc3Xc1ADWjdlGTIuE');
+    expect(Buffer.from(signer.getGroupPubKey()).toString('base64'))
+      .to.equal('A6Rnm7aewxlszEDU2rfd6dM+w1GppZXfYSF3llh/YNwDBoniR8rxIgWvqeBtEo/GLn2x6VZNPCo2DoVonXLD+wk12dSj9vOPBXocHw24ji8mcm1DrGzQk7miCA6ncw1ZCch1x656rcGoK1kNxh1CiVfh7hLqzwHoYAnl9zVzuWoEOsh2Gv2XQn8io8kH0XCEnEl//87YDe9AM0hpUQBY2BkDnwdYS9p3fJLJmPIsr1cX2xFLYOuGysRvPzw67HRtBvUmNvszK8KzhZwQjEIA+vIhalehDAdPtvIrajQ0rcMURF0+hhoMNozPkmj3eTc19HCoMDP/Xf7mCHRaiU40uAsMVXAquRr8rwJRnTeyO8bOjIuu8JYRFhuLlBovKGYWIiTZEveUfONnWsmnX2OXVzK8HacKo6A5lub1ANXS3UYLMa5VZgiCeS/dEKkOAPhHjHgAGmpqi8XmaWcYHN1FHwEWk0VWL6AukuXszCxH1p0kVcJGbZlwr2EpU5Gx25ad');
 
-//      expect(Buffer.from(signer.getGroupPrivKey()).toString('base64'))
-//        .to.equal('A6Rnm7aewxlszEDU2rfd6dM+w1GppZXfYSF3llh/YNwDBoniR8rxIgWvqeBtEo/GLn2x6VZNPCo2DoVonXLD+wk12dSj9vOPBXocHw24ji8mcm1DrGzQk7miCA6ncw1ZCch1x656rcGoK1kNxh1CiVfh7hLqzwHoYAnl9zVzuWoEOsh2Gv2XQn8io8kH0XCEnEl//87YDe9AM0hpUQBY2BkDnwdYS9p3fJLJmPIsr1cX2xFLYOuGysRvPzw67HRtBvUmNvszK8KzhZwQjEIA+vIhalehDAdPtvIrajQ0rcMURF0+hhoMNozPkmj3eTc19HCoMDP/Xf7mCHRaiU40uAsMVXAquRr8rwJRnTeyO8bOjIuu8JYRFhuLlBovKGYWG8IfTm7jddv4mdEp/kfenUTjaTpI01YWOoAX6EyXmZkLMa5VZgiCeS/dEKkOAPhHjHgAGmpqi8XmaWcYHN1FHwq8Rg89to5W7dqwNrXZXcn/9HJKc3Xc1ADWjdlGTIuEIekebbnK9CvXhJMfwFXbW41KShxBw+WLbfrF8P9uMJQEmtJ0HaNT4LxY7NL8yL/pOnZh4uKLkL+puRcffZSSjg==');
+    expect(Buffer.from(signer.getGroupPrivKey()).toString('base64'))
+      .to.equal('A6Rnm7aewxlszEDU2rfd6dM+w1GppZXfYSF3llh/YNwDBoniR8rxIgWvqeBtEo/GLn2x6VZNPCo2DoVonXLD+wk12dSj9vOPBXocHw24ji8mcm1DrGzQk7miCA6ncw1ZCch1x656rcGoK1kNxh1CiVfh7hLqzwHoYAnl9zVzuWoEOsh2Gv2XQn8io8kH0XCEnEl//87YDe9AM0hpUQBY2BkDnwdYS9p3fJLJmPIsr1cX2xFLYOuGysRvPzw67HRtBvUmNvszK8KzhZwQjEIA+vIhalehDAdPtvIrajQ0rcMURF0+hhoMNozPkmj3eTc19HCoMDP/Xf7mCHRaiU40uAsMVXAquRr8rwJRnTeyO8bOjIuu8JYRFhuLlBovKGYWIiTZEveUfONnWsmnX2OXVzK8HacKo6A5lub1ANXS3UYLMa5VZgiCeS/dEKkOAPhHjHgAGmpqi8XmaWcYHN1FHwEWk0VWL6AukuXszCxH1p0kVcJGbZlwr2EpU5Gx25adIekebbnK9CvXhJMfwFXbW41KShxBw+WLbfrF8P9uMJQEmtJ0HaNT4LxY7NL8yL/pOnZh4uKLkL+puRcffZSSjg==');
     });
 
     it('joinStatic', () => {
@@ -91,11 +92,11 @@ function doTests(name, moduleName) {
       const challenge = new Uint8Array(32);
 
       const { gsk, joinmsg } = client1.startJoin(challenge);
-//      expect(Buffer.from(joinmsg).toString('base64')).to.equal('BT9lbZbwGrbcdOB/nOuW9IpdRqSGMV2jDGwIZWuqSeYNb/q99CbwWcY0/GbDoRgm9y14YaXergzcRGtg4pTBfAJ9WKP+TtgjlWA5VAredZxBqXy8TG89b2bb//v7MZn3JCJvjJ6DpWpyixEKJutbIYwWoBY5FlzoGMOZ4z7qrtk=');
+      expect(Buffer.from(joinmsg).toString('base64')).to.equal('BAU/ZW2W8Bq23HTgf5zrlvSKXUakhjFdowxsCGVrqknmDW/6vfQm8FnGNPxmw6EYJvcteGGl3q4M3ERrYOKUwXwgLYZ2U1usQzmVrey89K/TkMDdsIkxkoeg2r/K2WuIEAwcGILQ1nyhsBVnR3fRcI13FSIjXTtm2mgkYH+cEsdS');
 
       const joinresp = server.processJoin(joinmsg, challenge);
       const credentials = client1.finishJoin(server.getGroupPubKey(), gsk, joinresp);
-//      expect(Buffer.from(credentials).toString('base64')).to.equal('BM7vI6jTIwK0Ac5WnaRzb88VUxH2CsgyfCNGeBDLz/AP5sihZauBmzaLznlkWLU5tmhg9jr/imDZyj1m2yA2+xGrHBI9gm438t3GxdWANKkUFWCs9jPRYTgnOlJPevsbHHCayO0r7JB+tpvdHXZ0BIX1h+5hbn14SmfeJ6mMO+8attrejw9pltMu18GquD/QAI6ftSa75kQNvpfb9Rp+axAMgN/IvyloidMxXmRfI9rPSAWKfqmlPOoX52tjlNrEE++LloYuBFxDvggyl3+V4HbsIiEDIFABgr73n9PEr6UDn8tHTZ6eHQJxG4fuXzMHZR/qxfkX/j+OyUfAkYKN5gsON+kTRNLcWclrVI2Z+Q29GlBmTTFgsjZqbeb/9h8T');
+      expect(Buffer.from(credentials).toString('base64')).to.equal('BATO7yOo0yMCtAHOVp2kc2/PFVMR9grIMnwjRngQy8/wD+bIoWWrgZs2i855ZFi1ObZoYPY6/4pg2co9ZtsgNvsEEascEj2Cbjfy3cbF1YA0qRQVYKz2M9FhOCc6Uk96+xsccJrI7SvskH62m90ddnQEhfWH7mFufXhKZ94nqYw77wQattrejw9pltMu18GquD/QAI6ftSa75kQNvpfb9Rp+axAMgN/IvyloidMxXmRfI9rPSAWKfqmlPOoX52tjlNrEBBPvi5aGLgRcQ74IMpd/leB27CIhAyBQAYK+95/TxK+lA5/LR02enh0CcRuH7l8zB2Uf6sX5F/4/jslHwJGCjeYLDjfpE0TS3FnJa1SNmfkNvRpQZk0xYLI2am3m//YfEw==');
 
       expect(() => {
         const signer = new GroupSigner();
@@ -108,13 +109,24 @@ function doTests(name, moduleName) {
       signer.seed(seed1);
       signer.setGroupPubKey(server.getGroupPubKey());
       signer.setUserCredentials(credentials);
-      const msg = new Uint8Array(32);
-      const bsn = new Uint8Array(32);
+      const msg = new Uint8Array(crypto.randomBytes(32));
+      const bsn = new Uint8Array(crypto.randomBytes(32));
+      const bsn2 = new Uint8Array(crypto.randomBytes(32));
 
       const sig = signer.sign(msg, bsn);
+      const sig2 = signer.sign(new Uint8Array(crypto.randomBytes(32)), bsn);
+      const sig3 = signer.sign(msg, bsn2);
       expect(signer.verify(msg, bsn, sig)).to.be.true;
+      expect(signer.verify(msg, bsn2, sig3)).to.be.true;
+      expect(signer.verify(msg, bsn, sig2)).to.be.false;
+      expect(sig).to.not.deep.equal(sig3);
+      expect(sig).to.not.deep.equal(sig2);
       msg[0] = 1;
       expect(signer.verify(msg, bsn, sig)).to.be.false;
+
+      // Tags (pseudonyms) should be same for sig and sig2, but should be diff. for sig3
+      expect(signer.getSignatureTag(sig)).to.deep.equal(signer.getSignatureTag(sig2));
+      expect(signer.getSignatureTag(sig)).to.not.deep.equal(signer.getSignatureTag(sig3));
     });
 
     it('errors', () => {
