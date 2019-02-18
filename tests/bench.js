@@ -4,7 +4,7 @@ const expect = require('chai').expect;
 const testModules = {
   native: '../lib/native',
   wasm: '../lib/wasm',
-  asmjs: '../lib/asmjs',
+  // asmjs: '../lib/asmjs', // very slow, esp. in nodejs
 };
 
 function time(fn) {
