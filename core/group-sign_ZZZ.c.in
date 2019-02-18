@@ -456,8 +456,17 @@ static int verifyECP2Proof(ECP2* G, ECP2* Y, BIG c, BIG s)
     return BIG_XXX_comp(c, cc) == 0;
 }
 
+// Note for future optimizations: In the implemented scheme batch signature verification
+// (for different signers) seems not possible. However, https://eprint.iacr.org/2007/172.pdf
+// suggests a modified scheme (with some restrictions) where fast batch signature verification
+// is possible. If those restrictions are acceptable for our use case, then this would mean big
+// improvements on server-side verification time (currently around 4ms per signature per core on EC2 c5
+// instance).
+  
+// We currently apply a couple of optimizations that are possible in the current scheme:     
+
 // According to https://eprint.iacr.org/2009/598.pdf we can transform
-// the original check e(A, Y) == e(B, G2) and e(C, G2) == e(A + D, X)?
+// the original check e(A, Y) == e(B, G2) and e(A + D, X) =? e(C, G2)
 // into a product of four pairings:
 //
 // e(e1·A, Y)·
@@ -487,7 +496,7 @@ static int verifyAuxFast(ECP* A, ECP* B, ECP* C, ECP* D, ECP2* X, ECP2 *Y, csprn
   BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
   setG2(&G2);
 
-  // TODO: Paper says these factors should be half the bits of the group order, but I think this is
+  // These factors can be half the bits of the group order, but this is
   // because of efficiency. Not sure if this makes a difference with milagro-crypto-c, would
   // need to test.
   randomModOrder(e1, RNG);
@@ -526,42 +535,6 @@ static int verifyAuxFast(ECP* A, ECP* B, ECP* C, ECP* D, ECP2* X, ECP2 *Y, csprn
   }
 
   return 1;
-}
-
-
-// Do we need e(X, a)· e(X, b) ** m == e(g1, c)? See 4.2
-static int verifyAux(ECP* A, ECP* B, ECP* C, ECP* D, ECP2* X, ECP2 *Y)
-{
-    FP12 w, y;
-    ECP2 G2;
-    setG2(&G2);
-
-    // a != 1
-    if (ECP_ZZZ_isinf(A)) {
-        return 0;
-    }
-
-    // e(a, Y) == e(b, g2) and e(c, g2) == e(a · d, X)?
-    // Can this be optimized?
-    PAIR_ZZZ_normalized_ate(&w, Y, A);
-    PAIR_ZZZ_fexp(&w);
-    PAIR_ZZZ_normalized_ate(&y, &G2, B);
-    PAIR_ZZZ_fexp(&y);
-    if (!FP12_YYY_equals(&w, &y)) {
-        return 0;
-    }
-
-    ECP AA;
-    ECP_ZZZ_copy(&AA, A);
-    ECP_ZZZ_add(&AA, D);
-    PAIR_ZZZ_normalized_ate(&w, X, &AA);
-    PAIR_ZZZ_fexp(&w);
-    PAIR_ZZZ_normalized_ate(&y, &G2, C);
-    PAIR_ZZZ_fexp(&y);
-    if (!FP12_YYY_equals(&w, &y)) {
-        return 0;
-    }
-    return 1;
 }
 
 static int serialize_group_public_key(struct GroupPublicKey* in, octet* out)
@@ -796,7 +769,7 @@ static int setup(csprng *RNG, struct GroupPrivateKey *priv)
     return 0;
 }
 
-static int join_finish_client(struct GroupPublicKey *pub, struct UserPrivateKey *priv, struct JoinResponse *resp)
+static int join_finish_client(struct GroupPublicKey *pub, struct UserPrivateKey *priv, struct JoinResponse *resp, csprng *RNG)
 {
     ECP G, Q;
     setG1(&G);
@@ -808,7 +781,7 @@ static int join_finish_client(struct GroupPublicKey *pub, struct UserPrivateKey 
         return 0;
     }
 
-    if (!verifyAux(&resp->cred.A, &resp->cred.B, &resp->cred.C, &resp->cred.D, &pub->X, &pub->Y)) {
+    if (!verifyAuxFast(&resp->cred.A, &resp->cred.B, &resp->cred.C, &resp->cred.D, &pub->X, &pub->Y, RNG)) {
         return 0;
     }
 
@@ -986,9 +959,13 @@ int GS_finishJoin(
     return GS_INVALID_USER_PRIVATE_KEY;
   }
 
+  // Temporal random number generator for fast verification, seeded with user secret.
+  csprng rng;
+  RAND_seed(&rng, len_gsk, gsk);
+
   octet o = {0, len, joinresponse};
   struct JoinResponse resp;
-  if (!deserialize_join_response(&o, &resp) || !join_finish_client(&pub, &priv, &resp)) {
+  if (!deserialize_join_response(&o, &resp) || !join_finish_client(&pub, &priv, &resp, &rng)) {
     return GS_INVALID_JOIN_RESPONSE;
   }
 
