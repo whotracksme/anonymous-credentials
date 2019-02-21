@@ -1,6 +1,3 @@
-[submodule "milagro-crypto-c"]
-	path = external/milagro-crypto-c
-	url = git@github.com:cliqz-oss/milagro-crypto-c.git
 [submodule "external/amcl"]
 	path = external/amcl
-	url = https://github.com/miracl/amcl.git
+	url = git@github.com:acatarineu/amcl.git

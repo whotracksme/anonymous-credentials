@@ -3,9 +3,6 @@
 BUILD_TYPE=Debug
 DEFAULT_FLAGS="-g -fPIC"
 
-# Native compiler:
-CC=clang
-CXX=clang++
 CFLAGS="$DEFAULT_FLAGS"
 CXXFLAGS="$DEFAULT_FLAGS"
 

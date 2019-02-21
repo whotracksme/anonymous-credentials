@@ -143,26 +143,16 @@ static void log_state(int state)
   #endif
 }
 
-// Enforce that input is normalized before computing the pairing.
-// (behaves as PAIR_ate in Milagro 3.5.0)
-static void PAIR_normalized_ate(FP12 *r, ECP2 *P, ECP *Q)
-{
-  ECP2_affine(P);
-  ECP_affine(Q);
-
-  PAIR_ate(r, P, Q);
-}
-
 static void PAIR_normalized_triple_ate(FP12 *r, ECP2 *P, ECP *Q, ECP2 *R, ECP *S, ECP2 *T, ECP *U)
 {
-  ECP2_affine(P);
-  ECP_affine(Q);
-  ECP2_affine(R);
-  ECP_affine(S);
-  ECP2_affine(T);
-  ECP_affine(U);
-
-  PAIR_triple_ate(r, P, Q, R, S, T, U);
+  // Use new multi-pairing mechanism
+  FP12 rr[ATE_BITS];
+  PAIR_initmp(rr);
+  PAIR_another(rr, P, Q); // This already normalizes with ECP*_affine
+  PAIR_another(rr, R, S);
+  PAIR_another(rr, T, U);
+  PAIR_miller(r, rr);
+  PAIR_fexp(r);
 }
 
 static int serialize_BIG(BIG* in, octet* out)
@@ -214,7 +204,7 @@ static int serialize_ECP(ECP* in, octet* out)
   out->len += ECPSIZE;
   if (out->len <= out->max) {
     octet tmp = {0, out->max - len, &out->val[len]};
-    ECP_toOctet(&tmp, in);
+    ECP_toOctet(&tmp, in, false);
     return 1;
   }
   return 0;
@@ -505,7 +495,6 @@ static int verifyAuxFast(ECP* A, ECP* B, ECP* C, ECP* D, ECP2* X, ECP2 *Y, csprn
 
   // w = e(e1·A, Y)·e((-e1·B) + (-e2·C), G2)·e(e2·(A + D), X)
   PAIR_normalized_triple_ate(&w, Y, &AA, &G2, &BB, X, &CC);
-  PAIR_fexp(&w);
 
   FP12_one(&y);
 
