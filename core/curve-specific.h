@@ -30,12 +30,12 @@ typedef FP2_BN254 FP2;
 #define FP_rcopy FP_BN254_rcopy
 #define FP12_one FP12_BN254_one
 #define FP12_equals FP12_BN254_equals
-#define ECP2_affine ECP2_BN254_affine
-#define ECP_affine ECP_BN254_affine
+// #define ECP2_affine ECP2_BN254_affine
+// #define ECP_affine ECP_BN254_affine
 #define PAIR_ate PAIR_BN254_ate
 #define PAIR_normalized_ate PAIR_BN254_normalized_ate
 #define PAIR_normalized_triple_ate PAIR_BN254_normalized_triple_ate
-#define PAIR_triple_ate PAIR_BN254_triple_ate
+// #define PAIR_triple_ate PAIR_BN254_triple_ate
 #define ECP2_toOctet ECP2_BN254_toOctet
 #define ECP2_fromOctet ECP2_BN254_fromOctet
 #define ECP_toOctet ECP_BN254_toOctet
@@ -57,10 +57,13 @@ typedef FP2_BN254 FP2;
 #define ECP2_equals ECP2_BN254_equals
 #define BIG_modmul BIG_256_56_modmul
 #define BIG_modneg BIG_256_56_modneg
-
+#define ATE_BITS ATE_BITS_BN254
 #define GS_BIG "256_56"
 #define GS_FIELD "BN254"
 #define GS_CURVE "BN254"
+#define PAIR_initmp PAIR_BN254_initmp
+#define PAIR_another PAIR_BN254_another
+#define PAIR_miller PAIR_BN254_miller
 
 #endif
 

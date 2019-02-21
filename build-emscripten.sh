@@ -24,22 +24,12 @@ then
   . ./config.release
 fi
 
-( rm -rf $BUILDFOLDER && mkdir -p $BUILDFOLDER && \
-    cd $BUILDFOLDER && \
-    emcmake cmake \
-      -DENABLE_TESTS=$ENABLE_TESTS \
-      -DCMAKE_C_FLAGS="$CFLAGS" \
-      -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
-      -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
-      -DBUILD_SHARED_LIBS=OFF \
-      -DAMCL_CURVE=$CURVE \
-      -DWORD_SIZE=64 \
-      $SCRIPTPATH && \
-    emmake make -j $(getconf _NPROCESSORS_ONLN) VERBOSE=1)
+# Emscripten compiler:
+AR=emar
+CC=emcc
+CXX=em++
 
-emcc $CFLAGS -D AMCL_CURVE_${CURVE} -c core/group-sign.c \
--I$BUILDFOLDER/milagro-crypto-c/include -I external/milagro-crypto-c/include \
--o $BUILDFOLDER/group-sign.o
+. ./build-common.sh
 
 name_0="wasm"
 flags_0="-s TOTAL_MEMORY=128KB -s TOTAL_STACK=64KB -s WASM=1 -s EXPORT_NAME='ModuleWasm'"
@@ -69,9 +59,7 @@ EMFLAGS=${!EMFLAGS}
     -L$BUILDFOLDER/milagro-crypto-c/core -Wl,-rpath,$BUILDFOLDER/milagro-crypto-c/core \
     -rdynamic \
     $BUILDFOLDER/group-sign.o \
-    $BUILDFOLDER/milagro-crypto-c/lib/libamcl_curve_$CURVE.a \
-    $BUILDFOLDER/milagro-crypto-c/lib/libamcl_core.a \
-    $BUILDFOLDER/milagro-crypto-c/lib/libamcl_pairing_$CURVE.a \
+    $BUILDFOLDER/amcl.a \
     -s EXPORTED_FUNCTIONS="[\
        '_GS_seed', \
        '_GS_setupGroup', \

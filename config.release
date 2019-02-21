@@ -4,9 +4,6 @@ BUILD_TYPE=Release
 
 DEFAULT_FLAGS="-O3 -DNDEBUG -fPIC"
 
-# Native compiler:
-CC=clang
-CXX=clang++
 CFLAGS="$DEFAULT_FLAGS"
 CXXFLAGS="$DEFAULT_FLAGS"
 
