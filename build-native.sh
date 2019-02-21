@@ -11,7 +11,7 @@ then
   . ./config.default
 fi
 
-rm -rf $BUILDFOLDER && \
+(rm -rf $BUILDFOLDER && \
     mkdir -p $BUILDFOLDER && \
     cd $BUILDFOLDER && \
     cmake \
@@ -27,4 +27,8 @@ rm -rf $BUILDFOLDER && \
       -DSANITIZER_SUPPORT=$SANITIZER_SUPPORT \
       $SCRIPTPATH \
     && \
-    VERBOSE=1 make
+    VERBOSE=1 make)
+
+$CC $CFLAGS -D AMCL_CURVE_${CURVE} -c core/group-sign.c \
+-I$BUILDFOLDER/milagro-crypto-c/include -I external/milagro-crypto-c/include \
+-o $BUILDFOLDER/group-sign.o

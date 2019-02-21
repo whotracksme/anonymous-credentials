@@ -37,6 +37,10 @@ fi
       $SCRIPTPATH && \
     emmake make -j $(getconf _NPROCESSORS_ONLN) VERBOSE=1)
 
+emcc $CFLAGS -D AMCL_CURVE_${CURVE} -c core/group-sign.c \
+-I$BUILDFOLDER/milagro-crypto-c/include -I external/milagro-crypto-c/include \
+-o $BUILDFOLDER/group-sign.o
+
 name_0="wasm"
 flags_0="-s TOTAL_MEMORY=128KB -s TOTAL_STACK=64KB -s WASM=1 -s EXPORT_NAME='ModuleWasm'"
 name_1="asmjs"
@@ -64,7 +68,7 @@ EMFLAGS=${!EMFLAGS}
     -o "$DISTFOLDER/group-sign-$EMNAME.js" \
     -L$BUILDFOLDER/milagro-crypto-c/core -Wl,-rpath,$BUILDFOLDER/milagro-crypto-c/core \
     -rdynamic \
-    $BUILDFOLDER/core/libgroupsign_$CURVE.a \
+    $BUILDFOLDER/group-sign.o \
     $BUILDFOLDER/milagro-crypto-c/lib/libamcl_curve_$CURVE.a \
     $BUILDFOLDER/milagro-crypto-c/lib/libamcl_core.a \
     $BUILDFOLDER/milagro-crypto-c/lib/libamcl_pairing_$CURVE.a \

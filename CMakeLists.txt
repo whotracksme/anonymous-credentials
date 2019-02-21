@@ -38,5 +38,3 @@ set(AMCL_CURVE "${AMCL_CURVE_NAMES}" CACHE STRING "Choice of Field. See ./includ
 set_property(CACHE AMCL_CURVE PROPERTY STRINGS ${AMCL_CURVE_NAMES})
 string(REPLACE "," ";" AMCL_CURVE "${AMCL_CURVE}")
 log(AMCL_CURVE)
-
-add_subdirectory(core)
