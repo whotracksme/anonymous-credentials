@@ -1,8 +1,8 @@
-#include "group-sign_ZZZ.h"
+#include "group-sign.h"
 #ifdef __cplusplus // workaround to allow using the library from C++
 #define C99
 #endif
-#include "pair_ZZZ.h"
+#include "curve-specific.h"
 #include "pbc_support.h"
 #ifdef __cplusplus
 #undef C99
@@ -15,34 +15,13 @@
 #include <stdio.h>
 #endif
 
-#define MYCURVE_ZZZ
-
-#ifdef MYCURVE_BN254
-#define HASH_TYPE SHA256
-#endif
-
-#ifdef MYCURVE_BLS383
-#define HASH_TYPE SHA384
-#endif
-
 #ifndef HASH_TYPE
 #error "HASH_TYPE is not defined. Make sure used curve is supported."
 #endif
 
-#if CURVETYPE_ZZZ!=WEIERSTRASS
-#error "CURVETYPE_ZZZ must be WEIERSTRASS"
-#endif
-
-#define MODBYTES MODBYTES_XXX
 #define ECPSIZE ((2*MODBYTES) + 1)
 #define ECP2SIZE (4*MODBYTES)
 #define BIGSIZE MODBYTES
-
-typedef BIG_XXX BIG;
-typedef ECP2_ZZZ ECP2;
-typedef ECP_ZZZ ECP;
-typedef FP12_YYY FP12;
-typedef FP2_YYY FP2;
 
 // Output must be at least MODBYTES
 void myhash(char *data, int len, char *output)
@@ -165,25 +144,25 @@ static void log_state(int state)
 }
 
 // Enforce that input is normalized before computing the pairing.
-// (behaves as PAIR_ZZZ_ate in Milagro 3.5.0)
-static void PAIR_ZZZ_normalized_ate(FP12 *r, ECP2 *P, ECP *Q)
+// (behaves as PAIR_ate in Milagro 3.5.0)
+static void PAIR_normalized_ate(FP12 *r, ECP2 *P, ECP *Q)
 {
-  ECP2_ZZZ_affine(P);
-  ECP_ZZZ_affine(Q);
+  ECP2_affine(P);
+  ECP_affine(Q);
 
-  PAIR_ZZZ_ate(r, P, Q);
+  PAIR_ate(r, P, Q);
 }
 
-static void PAIR_ZZZ_normalized_triple_ate(FP12 *r, ECP2 *P, ECP *Q, ECP2 *R, ECP *S, ECP2 *T, ECP *U)
+static void PAIR_normalized_triple_ate(FP12 *r, ECP2 *P, ECP *Q, ECP2 *R, ECP *S, ECP2 *T, ECP *U)
 {
-  ECP2_ZZZ_affine(P);
-  ECP_ZZZ_affine(Q);
-  ECP2_ZZZ_affine(R);
-  ECP_ZZZ_affine(S);
-  ECP2_ZZZ_affine(T);
-  ECP_ZZZ_affine(U);
+  ECP2_affine(P);
+  ECP_affine(Q);
+  ECP2_affine(R);
+  ECP_affine(S);
+  ECP2_affine(T);
+  ECP_affine(U);
 
-  PAIR_ZZZ_triple_ate(r, P, Q, R, S, T, U);
+  PAIR_triple_ate(r, P, Q, R, S, T, U);
 }
 
 static int serialize_BIG(BIG* in, octet* out)
@@ -191,7 +170,7 @@ static int serialize_BIG(BIG* in, octet* out)
   int len = out->len;
   out->len += BIGSIZE;
   if (out->len <= out->max) {
-    BIG_XXX_toBytes(&out->val[len], *in);
+    BIG_toBytes(&out->val[len], *in);
     return 1;
   }
   return 0;
@@ -201,7 +180,7 @@ static int deserialize_BIG(octet* in, BIG* out)
   int len = in->len;
   in->len += BIGSIZE;
   if (in->len <= in->max) {
-    BIG_XXX_fromBytes(*out, &in->val[len]);
+    BIG_fromBytes(*out, &in->val[len]);
     return 1;
   }
   return 0;
@@ -213,7 +192,7 @@ static int serialize_ECP2(ECP2* in, octet* out)
   out->len += ECP2SIZE;
   if (out->len <= out->max) {
     octet tmp = {0, out->max - len, &out->val[len]};
-    ECP2_ZZZ_toOctet(&tmp, in);
+    ECP2_toOctet(&tmp, in);
     return 1;
   }
   return 0;
@@ -224,7 +203,7 @@ static int deserialize_ECP2(octet* in, ECP2* out)
   in->len += ECP2SIZE;
   if (in->len <= in->max) {
     octet tmp = {0, in->max - len, &in->val[len]};
-    return ECP2_ZZZ_fromOctet(out, &tmp) && 1;
+    return ECP2_fromOctet(out, &tmp) && 1;
   }
   return 0;
 }
@@ -235,7 +214,7 @@ static int serialize_ECP(ECP* in, octet* out)
   out->len += ECPSIZE;
   if (out->len <= out->max) {
     octet tmp = {0, out->max - len, &out->val[len]};
-    ECP_ZZZ_toOctet(&tmp, in);
+    ECP_toOctet(&tmp, in);
     return 1;
   }
   return 0;
@@ -246,7 +225,7 @@ static int deserialize_ECP(octet* in, ECP* out)
   in->len += ECPSIZE;
   if (in->len <= in->max) {
     octet tmp = {0, in->max - len, &in->val[len]};
-    return ECP_ZZZ_fromOctet(out, &tmp) && 1;
+    return ECP_fromOctet(out, &tmp) && 1;
   }
   return 0;
 }
@@ -254,32 +233,32 @@ static int deserialize_ECP(octet* in, ECP* out)
 static void mapit(char *h, ECP *P)
 {
     octet o = {MODBYTES, MODBYTES, h};
-    ECP_ZZZ_mapit(P, &o);
+    ECP_mapit(P, &o);
 }
 
 static void setG1(ECP* X)
 {
     BIG x, y;
-    BIG_XXX_rcopy(x, CURVE_Gx_ZZZ);
-    BIG_XXX_rcopy(y, CURVE_Gy_ZZZ);
-    ECP_ZZZ_set(X, x, y);
+    BIG_rcopy(x, CURVE_Gx);
+    BIG_rcopy(y, CURVE_Gy);
+    ECP_set(X, x, y);
 }
 
 static void setG2(ECP2* X)
 {
     FP2 wx,wy;
-    FP_YYY_rcopy(&(wx.a),CURVE_Pxa_ZZZ);
-    FP_YYY_rcopy(&(wx.b),CURVE_Pxb_ZZZ);
-    FP_YYY_rcopy(&(wy.a),CURVE_Pya_ZZZ);
-    FP_YYY_rcopy(&(wy.b),CURVE_Pyb_ZZZ);
-    ECP2_ZZZ_set(X,&wx,&wy);
+    FP_rcopy(&(wx.a),CURVE_Pxa);
+    FP_rcopy(&(wx.b),CURVE_Pxb);
+    FP_rcopy(&(wy.a),CURVE_Pya);
+    FP_rcopy(&(wy.b),CURVE_Pyb);
+    ECP2_set(X,&wx,&wy);
 }
 
-static void randomModOrder(BIG_XXX x, csprng *RNG)
+static void randomModOrder(BIG x, csprng *RNG)
 {
     BIG order;
-    BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
-    BIG_XXX_randomnum(x, order, RNG);
+    BIG_rcopy(order, CURVE_Order);
+    BIG_randomnum(x, order, RNG);
 }
 
 static void ECP2challenge(ECP2* Y, ECP2* G, ECP2* GR, BIG c)
@@ -293,10 +272,10 @@ static void ECP2challenge(ECP2* Y, ECP2* G, ECP2* GR, BIG c)
     serialize_ECP2(GR, &TMP);
     myhash(tmp, TMP.len, hh);
 
-    BIG_XXX_fromBytes(c, hh);
+    BIG_fromBytes(c, hh);
     BIG order;
-    BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
-    BIG_XXX_mod(c, order);
+    BIG_rcopy(order, CURVE_Order);
+    BIG_mod(c, order);
 }
 
 // message is either NULL or has length MODBYTES
@@ -318,10 +297,10 @@ static void ECPchallenge(char* message, ECP* Y, ECP* G, ECP* GR, BIG c)
     serialize_ECP(GR, &TMP);
     myhash(tmp, TMP.len, hh);
 
-    BIG_XXX_fromBytes(c, hh);
+    BIG_fromBytes(c, hh);
     BIG order;
-    BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
-    BIG_XXX_mod(c, order);
+    BIG_rcopy(order, CURVE_Order);
+    BIG_mod(c, order);
 }
 
 // make POK of X such that Y = G ** X
@@ -330,15 +309,15 @@ static void ECPchallenge(char* message, ECP* Y, ECP* G, ECP* GR, BIG c)
 static void makeECPProof(csprng* RNG, ECP* G, ECP* Y, BIG x, char *message, BIG c, BIG s)
 {
     BIG r, order;
-    BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
+    BIG_rcopy(order, CURVE_Order);
     randomModOrder(r, RNG);
     ECP GR;
-    ECP_ZZZ_copy(&GR, G);
-    PAIR_ZZZ_G1mul(&GR, r);
+    ECP_copy(&GR, G);
+    PAIR_G1mul(&GR, r);
     ECPchallenge(message, Y, G, &GR, c);
-    BIG_XXX_modmul(s, c, x, order);
-    BIG_XXX_add(s, s, r);
-    BIG_XXX_mod(s, order);
+    BIG_modmul(s, c, x, order);
+    BIG_add(s, s, r);
+    BIG_mod(s, order);
 }
 
 static void ECPchallengeEquals(char* message, ECP* Y, ECP* Z, ECP* A, ECP* B, ECP* AR, ECP* BR, BIG c)
@@ -360,26 +339,26 @@ static void ECPchallengeEquals(char* message, ECP* Y, ECP* Z, ECP* A, ECP* B, EC
     serialize_ECP(BR, &TMP);
     myhash(tmp, TMP.len, hh);
 
-    BIG_XXX_fromBytes(c, hh);
+    BIG_fromBytes(c, hh);
     BIG order;
-    BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
-    BIG_XXX_mod(c, order);
+    BIG_rcopy(order, CURVE_Order);
+    BIG_mod(c, order);
 }
 
 static void makeECPProofEquals(csprng* RNG, ECP* A, ECP* B, ECP* Y, ECP* Z, BIG x, char* message, BIG c, BIG s)
 {
     BIG r, order;
-    BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
+    BIG_rcopy(order, CURVE_Order);
     randomModOrder(r, RNG);
     ECP AR, BR;
-    ECP_ZZZ_copy(&AR, A);
-    ECP_ZZZ_copy(&BR, B);
-    PAIR_ZZZ_G1mul(&AR, r);
-    PAIR_ZZZ_G1mul(&BR, r);
+    ECP_copy(&AR, A);
+    ECP_copy(&BR, B);
+    PAIR_G1mul(&AR, r);
+    PAIR_G1mul(&BR, r);
     ECPchallengeEquals(message, Y, Z, A, B, &AR, &BR, c);
-    BIG_XXX_modmul(s, c, x, order);
-    BIG_XXX_add(s, s, r);
-    BIG_XXX_mod(s, order);
+    BIG_modmul(s, c, x, order);
+    BIG_add(s, s, r);
+    BIG_mod(s, order);
 }
 
 // POK of X such that Y = G ** X
@@ -387,38 +366,38 @@ static void makeECPProofEquals(csprng* RNG, ECP* A, ECP* B, ECP* Y, ECP* Z, BIG 
 static int verifyECPProof(ECP* G, ECP* Y, char* message, BIG c, BIG s)
 {
     BIG cn, order;
-    BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
-    BIG_XXX_modneg(cn, c, order);
+    BIG_rcopy(order, CURVE_Order);
+    BIG_modneg(cn, c, order);
     ECP GS, YC;
-    ECP_ZZZ_copy(&GS, G);
-    ECP_ZZZ_copy(&YC, Y);
-    PAIR_ZZZ_G1mul(&GS, s);
-    PAIR_ZZZ_G1mul(&YC, cn);
-    ECP_ZZZ_add(&GS, &YC);
+    ECP_copy(&GS, G);
+    ECP_copy(&YC, Y);
+    PAIR_G1mul(&GS, s);
+    PAIR_G1mul(&YC, cn);
+    ECP_add(&GS, &YC);
     BIG cc;
     ECPchallenge(message, Y, G, &GS, cc);
-    return BIG_XXX_comp(c, cc) == 0;
+    return BIG_comp(c, cc) == 0;
 }
 
 static int verifyECPProofEquals(ECP* A, ECP* B, ECP* Y, ECP* Z, char* message, BIG c, BIG s)
 {
     BIG cn, order;
-    BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
-    BIG_XXX_modneg(cn, c, order);
+    BIG_rcopy(order, CURVE_Order);
+    BIG_modneg(cn, c, order);
     ECP AS, YC, BS, ZC;
-    ECP_ZZZ_copy(&AS, A);
-    ECP_ZZZ_copy(&YC, Y);
-    ECP_ZZZ_copy(&BS, B);
-    ECP_ZZZ_copy(&ZC, Z);
-    PAIR_ZZZ_G1mul(&AS, s);
-    PAIR_ZZZ_G1mul(&YC, cn);
-    PAIR_ZZZ_G1mul(&BS, s);
-    PAIR_ZZZ_G1mul(&ZC, cn);
-    ECP_ZZZ_add(&AS, &YC);
-    ECP_ZZZ_add(&BS, &ZC);
+    ECP_copy(&AS, A);
+    ECP_copy(&YC, Y);
+    ECP_copy(&BS, B);
+    ECP_copy(&ZC, Z);
+    PAIR_G1mul(&AS, s);
+    PAIR_G1mul(&YC, cn);
+    PAIR_G1mul(&BS, s);
+    PAIR_G1mul(&ZC, cn);
+    ECP_add(&AS, &YC);
+    ECP_add(&BS, &ZC);
     BIG cc;
     ECPchallengeEquals(message, Y, Z, A, B, &AS, &BS, cc);
-    return BIG_XXX_comp(c, cc) == 0;
+    return BIG_comp(c, cc) == 0;
 }
 
 // make POK of X such that Y = G ** X
@@ -426,15 +405,15 @@ static int verifyECPProofEquals(ECP* A, ECP* B, ECP* Y, ECP* Z, char* message, B
 static void makeECP2Proof(csprng* RNG, ECP2* G, ECP2* Y, BIG x, BIG c, BIG s)
 {
     BIG r, order;
-    BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
+    BIG_rcopy(order, CURVE_Order);
     randomModOrder(r, RNG);
     ECP2 GR;
-    ECP2_ZZZ_copy(&GR, G);
-    PAIR_ZZZ_G2mul(&GR, r);
+    ECP2_copy(&GR, G);
+    PAIR_G2mul(&GR, r);
     ECP2challenge(Y, G, &GR, c);
-    BIG_XXX_modmul(s, c, x, order);
-    BIG_XXX_add(s, s, r);
-    BIG_XXX_mod(s, order);
+    BIG_modmul(s, c, x, order);
+    BIG_add(s, s, r);
+    BIG_mod(s, order);
 }
 
 
@@ -443,17 +422,17 @@ static void makeECP2Proof(csprng* RNG, ECP2* G, ECP2* Y, BIG x, BIG c, BIG s)
 static int verifyECP2Proof(ECP2* G, ECP2* Y, BIG c, BIG s)
 {
     BIG cn, order;
-    BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
-    BIG_XXX_modneg(cn, c, order);
+    BIG_rcopy(order, CURVE_Order);
+    BIG_modneg(cn, c, order);
     ECP2 GS, YC;
-    ECP2_ZZZ_copy(&GS, G);
-    ECP2_ZZZ_copy(&YC, Y);
-    PAIR_ZZZ_G2mul(&GS, s);
-    PAIR_ZZZ_G2mul(&YC, cn);
-    ECP2_ZZZ_add(&GS, &YC);
+    ECP2_copy(&GS, G);
+    ECP2_copy(&YC, Y);
+    PAIR_G2mul(&GS, s);
+    PAIR_G2mul(&YC, cn);
+    ECP2_add(&GS, &YC);
     BIG cc;
     ECP2challenge(Y, G, &GS, cc);
-    return BIG_XXX_comp(c, cc) == 0;
+    return BIG_comp(c, cc) == 0;
 }
 
 // Note for future optimizations: In the implemented scheme batch signature verification
@@ -489,11 +468,11 @@ static int verifyAuxFast(ECP* A, ECP* B, ECP* C, ECP* D, ECP2* X, ECP2 *Y, csprn
   FP12 w, y;
 
   // A != 1
-  if (ECP_ZZZ_isinf(A)) {
+  if (ECP_isinf(A)) {
       return 0;
   }
 
-  BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
+  BIG_rcopy(order, CURVE_Order);
   setG2(&G2);
 
   // These factors can be half the bits of the group order, but this is
@@ -501,36 +480,36 @@ static int verifyAuxFast(ECP* A, ECP* B, ECP* C, ECP* D, ECP2* X, ECP2 *Y, csprn
   // need to test.
   randomModOrder(e1, RNG);
   randomModOrder(e2, RNG);
-  BIG_XXX_modneg(ne1, e1, order);
-  BIG_XXX_modneg(ne2, e2, order);
+  BIG_modneg(ne1, e1, order);
+  BIG_modneg(ne2, e2, order);
 
   // AA = e1·A
-  ECP_ZZZ_copy(&AA, A);
-  PAIR_ZZZ_G1mul(&AA, e1);
+  ECP_copy(&AA, A);
+  PAIR_G1mul(&AA, e1);
 
   // BB = -e1·B
-  ECP_ZZZ_copy(&BB, B);
-  PAIR_ZZZ_G1mul(&BB, ne1);
+  ECP_copy(&BB, B);
+  PAIR_G1mul(&BB, ne1);
 
   // CC = -e2·C
-  ECP_ZZZ_copy(&CC, C);
-  PAIR_ZZZ_G1mul(&CC, ne2);
+  ECP_copy(&CC, C);
+  PAIR_G1mul(&CC, ne2);
 
   // BB = (-e1·B) + (-e2·C)
-  ECP_ZZZ_add(&BB, &CC);
+  ECP_add(&BB, &CC);
 
   // CC = e2·(A + D)
-  ECP_ZZZ_copy(&CC, A);
-  ECP_ZZZ_add(&CC, D);
-  PAIR_ZZZ_G1mul(&CC, e2);
+  ECP_copy(&CC, A);
+  ECP_add(&CC, D);
+  PAIR_G1mul(&CC, e2);
 
   // w = e(e1·A, Y)·e((-e1·B) + (-e2·C), G2)·e(e2·(A + D), X)
-  PAIR_ZZZ_normalized_triple_ate(&w, Y, &AA, &G2, &BB, X, &CC);
-  PAIR_ZZZ_fexp(&w);
+  PAIR_normalized_triple_ate(&w, Y, &AA, &G2, &BB, X, &CC);
+  PAIR_fexp(&w);
 
-  FP12_YYY_one(&y);
+  FP12_one(&y);
 
-  if (!FP12_YYY_equals(&w, &y)) {
+  if (!FP12_equals(&w, &y)) {
       return 0;
   }
 
@@ -581,9 +560,9 @@ static int _checkPrivateKey(struct GroupPrivateKey* key)
   ECP2 X, Y;
   setG2(&X);
   setG2(&Y);
-  PAIR_ZZZ_G2mul(&X, key->x);
-  PAIR_ZZZ_G2mul(&Y, key->y);
-  return ECP2_ZZZ_equals(&X, &key->pub.X) && ECP2_ZZZ_equals(&Y, &key->pub.Y);
+  PAIR_G2mul(&X, key->x);
+  PAIR_G2mul(&Y, key->y);
+  return ECP2_equals(&X, &key->pub.X) && ECP2_equals(&Y, &key->pub.Y);
 }
 
 static int deserialize_group_private_key(octet* in, struct GroupPrivateKey* out)
@@ -695,9 +674,9 @@ static void join_client(csprng *RNG, char* challenge, int challenge_len, struct 
     ECP G;
     setG1(&G);
 
-    ECP_ZZZ_copy(&j->Q, &G);
+    ECP_copy(&j->Q, &G);
     randomModOrder(priv->gsk, RNG);
-    PAIR_ZZZ_G1mul(&j->Q, priv->gsk);
+    PAIR_G1mul(&j->Q, priv->gsk);
 
     char h[MODBYTES];
     myhash(challenge, challenge_len, h);
@@ -709,7 +688,7 @@ static void join_client(csprng *RNG, char* challenge, int challenge_len, struct 
 static int join_server(csprng *RNG, struct GroupPrivateKey *priv, struct JoinMessage *j, char* challenge, int challenge_len, struct JoinResponse *resp)
 {
     BIG order;
-    BIG_XXX_rcopy(order, CURVE_Order_ZZZ);
+    BIG_rcopy(order, CURVE_Order);
 
     ECP G;
     setG1(&G);
@@ -727,20 +706,20 @@ static int join_server(csprng *RNG, struct GroupPrivateKey *priv, struct JoinMes
 
         BIG r;
         randomModOrder(r, RNG);
-        ECP_ZZZ_copy(A, &G);
-        PAIR_ZZZ_G1mul(A, r);
+        ECP_copy(A, &G);
+        PAIR_G1mul(A, r);
 
-        ECP_ZZZ_copy(B, A);
-        PAIR_ZZZ_G1mul(B, priv->y);
+        ECP_copy(B, A);
+        PAIR_G1mul(B, priv->y);
 
-        ECP_ZZZ_copy(D, Q);
+        ECP_copy(D, Q);
         BIG tmp;
-        BIG_XXX_modmul(tmp, r, priv->y, order);
-        PAIR_ZZZ_G1mul(D, tmp);
+        BIG_modmul(tmp, r, priv->y, order);
+        PAIR_G1mul(D, tmp);
 
-        ECP_ZZZ_copy(C, A);
-        ECP_ZZZ_add(C, D);
-        PAIR_ZZZ_G1mul(C, priv->x);
+        ECP_copy(C, A);
+        ECP_add(C, D);
+        PAIR_G1mul(C, priv->x);
 
         makeECPProofEquals(RNG, &G, Q, B, D, tmp, 0, resp->c, resp->s);
     }
@@ -752,16 +731,16 @@ static int setup(csprng *RNG, struct GroupPrivateKey *priv)
     ECP2 W;
     setG2(&W);
 
-    ECP2_ZZZ_copy(&priv->pub.X,&W);
-    ECP2_ZZZ_copy(&priv->pub.Y,&W);
+    ECP2_copy(&priv->pub.X,&W);
+    ECP2_copy(&priv->pub.Y,&W);
 
     // Choose random x,y less than the group order
     randomModOrder(priv->x, RNG);
     randomModOrder(priv->y, RNG);
 
     // Compute public keys
-    PAIR_ZZZ_G2mul(&priv->pub.X, priv->x);
-    PAIR_ZZZ_G2mul(&priv->pub.Y, priv->y);
+    PAIR_G2mul(&priv->pub.X, priv->x);
+    PAIR_G2mul(&priv->pub.Y, priv->y);
 
     makeECP2Proof(RNG, &W, &priv->pub.X, priv->x, priv->pub.cx, priv->pub.sx);
     makeECP2Proof(RNG, &W, &priv->pub.Y, priv->y, priv->pub.cy, priv->pub.sy);
@@ -774,8 +753,8 @@ static int join_finish_client(struct GroupPublicKey *pub, struct UserPrivateKey 
     ECP G, Q;
     setG1(&G);
 
-    ECP_ZZZ_copy(&Q, &G);
-    PAIR_ZZZ_G1mul(&Q, priv->gsk);
+    ECP_copy(&Q, &G);
+    PAIR_G1mul(&Q, priv->gsk);
 
     if (!verifyECPProofEquals(&G, &Q, &resp->cred.B, &resp->cred.D, 0, resp->c, resp->s)) {
         return 0;
@@ -785,10 +764,10 @@ static int join_finish_client(struct GroupPublicKey *pub, struct UserPrivateKey 
         return 0;
     }
 
-    ECP_ZZZ_copy(&priv->cred.A, &resp->cred.A);
-    ECP_ZZZ_copy(&priv->cred.B, &resp->cred.B);
-    ECP_ZZZ_copy(&priv->cred.C, &resp->cred.C);
-    ECP_ZZZ_copy(&priv->cred.D, &resp->cred.D);
+    ECP_copy(&priv->cred.A, &resp->cred.A);
+    ECP_copy(&priv->cred.B, &resp->cred.B);
+    ECP_copy(&priv->cred.C, &resp->cred.C);
+    ECP_copy(&priv->cred.D, &resp->cred.D);
 
     return 1;
 }
@@ -798,25 +777,25 @@ static void sign(csprng *RNG, struct UserPrivateKey *priv, char* msg, int msg_le
     char hh[2 * MODBYTES];
     char h[MODBYTES];
 
-    ECP_ZZZ_copy(&sig->A, &priv->cred.A);
-    ECP_ZZZ_copy(&sig->B, &priv->cred.B);
-    ECP_ZZZ_copy(&sig->C, &priv->cred.C);
-    ECP_ZZZ_copy(&sig->D, &priv->cred.D);
+    ECP_copy(&sig->A, &priv->cred.A);
+    ECP_copy(&sig->B, &priv->cred.B);
+    ECP_copy(&sig->C, &priv->cred.C);
+    ECP_copy(&sig->D, &priv->cred.D);
 
     // Randomize credentials for signature
     BIG r;
     randomModOrder(r, RNG);
-    PAIR_ZZZ_G1mul(&sig->A, r);
-    PAIR_ZZZ_G1mul(&sig->B, r);
-    PAIR_ZZZ_G1mul(&sig->C, r);
-    PAIR_ZZZ_G1mul(&sig->D, r);
+    PAIR_G1mul(&sig->A, r);
+    PAIR_G1mul(&sig->B, r);
+    PAIR_G1mul(&sig->C, r);
+    PAIR_G1mul(&sig->D, r);
 
     // Map basename to point in G1 (bsn should be 32 bytes and result of crypto hash like sha256)
     ECP BSN;
     myhash(bsn, bsn_len, h);
     mapit(h, &BSN);
-    ECP_ZZZ_copy(&sig->NYM, &BSN);
-    PAIR_ZZZ_G1mul(&sig->NYM, priv->gsk);
+    ECP_copy(&sig->NYM, &BSN);
+    PAIR_G1mul(&sig->NYM, priv->gsk);
 
     // Compute H(H(msg) || H(bsn)) to be used in proof of equality
     myhash(msg, msg_len, &hh[0]);
@@ -841,7 +820,7 @@ static int verify(char *msg, int msg_len, char *bsn, int bsn_len, struct Signatu
     myhash(hh, sizeof(hh), h);
 
     return verifyECPProofEquals(&sig->B, &BSN, &sig->D, &sig->NYM, h, sig->c, sig->s)
-     && !ECP_ZZZ_isinf(&sig->A) && !ECP_ZZZ_isinf(&sig->B)
+     && !ECP_isinf(&sig->A) && !ECP_isinf(&sig->B)
      && verifyAuxFast(&sig->A, &sig->B, &sig->C, &sig->D, &pub->X, &pub->Y, RNG);
 }
 
@@ -1122,15 +1101,15 @@ const char* GS_version() {
 }
 
 const char* GS_big() {
-  return "XXX";
+  return GS_BIG;
 }
 
 const char* GS_field() {
-  return "YYY";
+  return GS_FIELD;
 }
 
 const char* GS_curve() {
-  return "ZZZ";
+  return GS_CURVE;
 }
 
 int GS_success() {
