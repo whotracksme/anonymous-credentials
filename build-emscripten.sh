@@ -56,7 +56,6 @@ EMFLAGS=${!EMFLAGS}
     -std=c11 -Wall -Wextra -Wno-strict-prototypes -Wunused-value -Wcast-align \
     -Wunused-variable -Wundef -Wformat-security -Wshadow \
     -o "$DISTFOLDER/group-sign-$EMNAME.js" \
-    -L$BUILDFOLDER/milagro-crypto-c/core -Wl,-rpath,$BUILDFOLDER/milagro-crypto-c/core \
     -rdynamic \
     $BUILDFOLDER/group-sign.o \
     $BUILDFOLDER/amcl.a \
