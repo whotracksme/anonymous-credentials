@@ -76,8 +76,6 @@ EMFLAGS=${!EMFLAGS}
        '_GS_startJoin', \
        '_GS_finishJoin', \
        '_GS_version', \
-       '_GS_big', \
-       '_GS_field', \
        '_GS_curve', \
        '_GS_success', \
        '_GS_failure', \

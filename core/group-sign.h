@@ -51,8 +51,6 @@ int GS_verify(void* state, char* msg, int msg_len, char* bsn, int bsn_len, char*
 int GS_getSignatureTag(char* signature, int sig_len, char* tag, int* tag_len);
 size_t GS_getStateSize();
 const char* GS_version();
-const char* GS_big();
-const char* GS_field();
 const char* GS_curve();
 int GS_success();
 int GS_failure();
