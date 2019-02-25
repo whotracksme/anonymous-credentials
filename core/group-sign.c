@@ -1089,14 +1089,6 @@ const char* GS_version() {
   return "1.0";
 }
 
-const char* GS_big() {
-  return GS_BIG;
-}
-
-const char* GS_field() {
-  return GS_FIELD;
-}
-
 const char* GS_curve() {
   return GS_CURVE;
 }

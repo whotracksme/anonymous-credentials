@@ -33,8 +33,6 @@ extern int GS_finishJoin(
 );
 
 extern const char* GS_version();
-extern const char* GS_big();
-extern const char* GS_field();
 extern const char* GS_curve();
 extern int GS_success();
 extern int GS_failure();
@@ -474,10 +472,8 @@ napi_value FinishJoin(napi_env env, napi_callback_info info) {
 }
 
 napi_value Init(napi_env env, napi_value exports) {
-  napi_value version, big, field, curve;
+  napi_value version, curve;
   NAPI_CALL(napi_create_string_utf8(env, GS_version(), NAPI_AUTO_LENGTH, &version));
-  NAPI_CALL(napi_create_string_utf8(env, GS_big(), NAPI_AUTO_LENGTH, &big));
-  NAPI_CALL(napi_create_string_utf8(env, GS_field(), NAPI_AUTO_LENGTH, &field));
   NAPI_CALL(napi_create_string_utf8(env, GS_curve(), NAPI_AUTO_LENGTH, &curve));
 
   napi_property_descriptor properties[] = {
@@ -497,8 +493,6 @@ napi_value Init(napi_env env, napi_value exports) {
     DECLARE_NAPI_METHOD("finishJoin", FinishJoin),
 
     DECLARE_NAPI_STATIC("_version", version),
-    DECLARE_NAPI_STATIC("_big", big),
-    DECLARE_NAPI_STATIC("_field", field),
     DECLARE_NAPI_STATIC("_curve", curve)
   };
 

@@ -25,8 +25,6 @@ function GroupSigner() {
 
 function initStaticMembers() {
   GroupSigner._version = UTF8ToString(Module._GS_version());
-  GroupSigner._big = UTF8ToString(Module._GS_big());
-  GroupSigner._field = UTF8ToString(Module._GS_field());
   GroupSigner._curve = UTF8ToString(Module._GS_curve());
 }
 
