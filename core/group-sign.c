@@ -24,8 +24,11 @@
 #define BIGSIZE MODBYTES
 
 // Output must be at least MODBYTES
-void myhash(char *data, int len, char *output)
-{
+void myhash(char *data, int len, char *output) {
+  // HASH_TYPE is also number of output bytes
+  //   SHA256 32 /**< SHA-256 hashing */
+  //   SHA384 48 /**< SHA-384 hashing */
+  //   SHA512 64 /**< SHA-512 hashing */
   octet msg = {len, len, data};
   octet out = {0, MODBYTES, output};
   mhashit(HASH_TYPE, -1, &msg, &out);
@@ -779,7 +782,7 @@ static void sign(csprng *RNG, struct UserPrivateKey *priv, char* msg, int msg_le
     PAIR_G1mul(&sig->C, r);
     PAIR_G1mul(&sig->D, r);
 
-    // Map basename to point in G1 (bsn should be 32 bytes and result of crypto hash like sha256)
+    // Map basename to point in G1
     ECP BSN;
     myhash(bsn, bsn_len, h);
     mapit(h, &BSN);
