@@ -96,3 +96,16 @@ To build everything:
 ## Running the tests
 
     make test
+
+## Changing the curve
+
+We currently use `BN254` pairing-friendly curve, which according to our knowledge has roughly 100-bit security.
+
+To move to a new curve, the following steps are required:
+
+1. Change [CURVE](CURVE) to a pairing-friendly curve supported by AMCL library.
+2. Change [build-common.sh](build-common.sh) so that the `config64.py` choice includes the selected curve.
+3. Run `npm run native-install` and ignore the errors.
+4. Run `grep CURVE_Order_ _build/nativebuild/ecp_NEWCURVE.h` and write down the result -> `BIG_XXX`.
+5. Add the required defines and typedefs in [core/curve-specific.h](core/curve-specific.h). It should suffice to copy `BN254` case, change `BN254` -> `NEWCURVE` and change `256_56` -> to the `XXX` in the previous step.
+6. Run `make && npm test`. All tests should pass except regression ones (currently hardcoded to `BN254`).
