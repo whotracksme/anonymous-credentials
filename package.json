@@ -6,7 +6,7 @@
   "scripts": {
     "test": "mocha --timeout 10000 --full-trace tests/tests.js",
     "bench": "node tests/bench.js",
-    "native-install": "bash build-native.sh && node-gyp rebuild"
+    "native-install": "bash build-native.sh && CC=clang CXX=clang++ AR=llvm-ar node-gyp rebuild --verbose"
   },
   "repository": {
     "type": "git",
