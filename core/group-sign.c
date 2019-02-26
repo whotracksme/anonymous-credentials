@@ -438,7 +438,7 @@ static int verifyECP2Proof(ECP2* G, ECP2* Y, BIG c, BIG s)
 // We currently apply a couple of optimizations that are possible in the current scheme:     
 
 // According to https://eprint.iacr.org/2009/598.pdf we can transform
-// the original check e(A, Y) == e(B, G2) and e(A + D, X) =? e(C, G2)
+// the original check e(A, Y) =? e(B, G2) and e(A + D, X) =? e(C, G2)
 // into a product of four pairings:
 //
 // e(e1·A, Y)·
