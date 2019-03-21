@@ -1,2 +1,4 @@
 . ./config.debug
 SANITIZER_SUPPORT="address"
+CFLAGS="$CFLAGS -fsanitize=address"
+CXXFLAGS="$CXXFLAGS -fsanitize=address"

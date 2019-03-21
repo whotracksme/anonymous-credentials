@@ -1,5 +1,7 @@
 . ./config.debug
 SANITIZER_SUPPORT="undefined"
+CFLAGS="$CFLAGS -fsanitize=undefined"
+CXXFLAGS="$CXXFLAGS -fsanitize=undefined"
 
 # On Linux, sanitizer and 128 bit integers do not work well on clang:
 # https://bugs.llvm.org/show_bug.cgi?id=16404
