@@ -58,7 +58,7 @@ EMFLAGS=${!EMFLAGS}
     -o "$DISTFOLDER/group-sign-$EMNAME.js" \
     -rdynamic \
     $BUILDFOLDER/group-sign.o \
-    $BUILDFOLDER/amcl.a \
+    $BUILDFOLDER/core.a \
     -s EXPORTED_FUNCTIONS="[\
        '_GS_seed', \
        '_GS_setupGroup', \

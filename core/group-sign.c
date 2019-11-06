@@ -3,7 +3,6 @@
 #define C99
 #endif
 #include "curve-specific.h"
-#include "pbc_support.h"
 #ifdef __cplusplus
 #undef C99
 #endif
@@ -20,6 +19,24 @@
 #endif
 
 #define ECPSIZE ((2*MODBYTES) + 1)
+
+// Attention: it used to be 4*MODBYTES, but now ECP2_toOctet will
+// write (4*MODBYTES)+1 bytes. For backward compatibility reasons,
+// ECP2_toOctet_compatibility and ECP2_fromOctet_compatibility can
+// be used.
+//
+// Background:
+//
+// Recent changes in Milagro changed ECP2_ZZZ_toOctet.
+// (The change came when they moved repositories, so you have to
+// compare miracl/amcl with miracl/core.
+//
+// The new code appends one byte for the type now.
+// In our case, we are using a non-compressed representation, i.e.,
+// the value of the leading bit will be implicitely known.
+//
+// To guarantee backward compatibility with existing keys and old
+// clients, let's stay on the old representation.
 #define ECP2SIZE (4*MODBYTES)
 #define BIGSIZE MODBYTES
 
@@ -31,7 +48,7 @@ void myhash(char *data, int len, char *output) {
   //   SHA512 64 /**< SHA-512 hashing */
   octet msg = {len, len, data};
   octet out = {0, MODBYTES, output};
-  mhashit(HASH_TYPE, -1, &msg, &out);
+  GPhash(MC_SHA2, HASH_TYPE, &out, HASH_TYPE, &msg, -1, NULL);
 }
 
 struct GroupPublicKey {
@@ -179,13 +196,63 @@ static int deserialize_BIG(octet* in, BIG* out)
   return 0;
 }
 
+// Similar to ECP2_ZZZ_toOctet, but assumes no-compression,
+// and thus does not insert a leading byte with that value.
+//
+// To preserve binary compatibility with older clients and
+// with already published keys, let's keep compatibility.
+static void ECP2_toOctet_compatibility(octet *W, ECP2 *Q)
+{
+  BIG b;
+  FP2 qx, qy;
+  ECP2_get(&qx, &qy, Q);
+
+  FP_redc(b, &(qx.a));
+  BIG_toBytes(&(W->val[0]), b);
+  FP_redc(b, &(qx.b));
+  BIG_toBytes(&(W->val[MODBYTES]), b);
+
+  FP_redc(b, &(qy.a));
+  BIG_toBytes(&(W->val[2 * MODBYTES]), b);
+  FP_redc(b, &(qy.b));
+  BIG_toBytes(&(W->val[3 * MODBYTES]), b);
+
+  W->len = 4 * MODBYTES;
+}
+
+// similar to ECP2_ZZZ_fromOctet, but assumes no-compression,
+// and thus does not expect a leading byte with that value.
+//
+// To preserve binary compatibility with older clients and
+// with already published keys, let's keep compatibility.
+int ECP2_fromOctet_compatibility(ECP2 *Q, octet *W)
+{
+  BIG b;
+  FP2 qx, qy;
+
+  BIG_fromBytes(b, &(W->val[0]));
+  FP_nres(&(qx.a), b);
+  BIG_fromBytes(b, &(W->val[MODBYTES]));
+  FP_nres(&(qx.b), b);
+
+  BIG_fromBytes(b, &(W->val[2 * MODBYTES]));
+  FP_nres(&(qy.a), b);
+  BIG_fromBytes(b, &(W->val[3 * MODBYTES]));
+  FP_nres(&(qy.b), b);
+
+  if (ECP2_set(Q, &qx, &qy))
+    return 1;
+
+  return 0;
+}
+
 static int serialize_ECP2(ECP2* in, octet* out)
 {
   int len = out->len;
   out->len += ECP2SIZE;
   if (out->len <= out->max) {
     octet tmp = {0, out->max - len, &out->val[len]};
-    ECP2_toOctet(&tmp, in);
+    ECP2_toOctet_compatibility(&tmp, in);
     return 1;
   }
   return 0;
@@ -196,7 +263,7 @@ static int deserialize_ECP2(octet* in, ECP2* out)
   in->len += ECP2SIZE;
   if (in->len <= in->max) {
     octet tmp = {0, in->max - len, &in->val[len]};
-    return ECP2_fromOctet(out, &tmp) && 1;
+    return ECP2_fromOctet_compatibility(out, &tmp) && 1;
   }
   return 0;
 }

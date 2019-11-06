@@ -28,6 +28,8 @@ typedef FP2_BN254 FP2;
 #define BIG_add BIG_256_56_add
 #define BIG_comp BIG_256_56_comp
 #define FP_rcopy FP_BN254_rcopy
+#define FP_redc FP_BN254_redc
+#define FP_nres FP_BN254_nres
 #define FP12_one FP12_BN254_one
 #define FP12_equals FP12_BN254_equals
 #define PAIR_ate PAIR_BN254_ate
@@ -35,6 +37,7 @@ typedef FP2_BN254 FP2;
 #define PAIR_normalized_triple_ate PAIR_BN254_normalized_triple_ate
 #define ECP2_toOctet ECP2_BN254_toOctet
 #define ECP2_fromOctet ECP2_BN254_fromOctet
+#define ECP2_get ECP2_BN254_get
 #define ECP_toOctet ECP_BN254_toOctet
 #define ECP_fromOctet ECP_BN254_fromOctet
 #define CURVE_Pxa CURVE_Pxa_BN254
