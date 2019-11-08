@@ -290,10 +290,39 @@ static int deserialize_ECP(octet* in, ECP* out)
   return 0;
 }
 
+/**
+ * ECP_ZZZ_mapit changed. For backward compatibility reasons,
+ * we have to use the old implementation. Otherwise, old
+ * clients (or old group keys) will stop working.
+ *
+ * The folling code is a simplified version of the original
+ * ECP_ZZZ_mapit implementation.
+ */
+void ECP_mapit_compatibility(ECP *P,octet *W)
+{
+  BIG q,x;
+  BIG_fromBytes(x,W->val);
+  BIG_rcopy(q,Modulus);
+  BIG_mod(x,q);
+
+  for (;;) {
+    for (;;) {
+        ECP_setx(P,x,0); // for CURVETYPE_ZZZ!=MONTGOMERY
+        BIG_inc(x,1);
+        BIG_norm(x);
+        if (!ECP_isinf(P))
+          break;
+    }
+    ECP_cfp(P);
+    if (!ECP_isinf(P))
+      break;
+  }
+}
+
 static void mapit(char *h, ECP *P)
 {
     octet o = {MODBYTES, MODBYTES, h};
-    ECP_mapit(P, &o);
+    ECP_mapit_compatibility(P, &o);
 }
 
 static void setG1(ECP* X)
