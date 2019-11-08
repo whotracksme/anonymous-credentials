@@ -18,10 +18,14 @@ typedef FP2_BN254 FP2;
 #define BIG_fromBytes BIG_256_56_fromBytes
 #define BIG_rcopy BIG_256_56_rcopy
 #define BIG_randomnum BIG_256_56_randomnum
+#define BIG_output BIG_256_56_output
+#define BIG_inc BIG_256_56_inc
+#define BIG_norm BIG_256_56_norm
 #define CURVE_Gx CURVE_Gx_BN254
 #define CURVE_Gy CURVE_Gy_BN254
 #define ECP_set ECP_BN254_set
 #define ECP_mapit ECP_BN254_mapit
+#define ECP_cfp ECP_BN254_cfp
 #define ECP_fromOctet ECP_BN254_fromOctet
 #define ECP_toOctet ECP_BN254_toOctet
 #define BIG_mod BIG_256_56_mod
@@ -46,6 +50,7 @@ typedef FP2_BN254 FP2;
 #define CURVE_Pyb CURVE_Pyb_BN254
 #define ECP2_set ECP2_BN254_set
 #define CURVE_Order CURVE_Order_BN254
+#define Modulus Modulus_BN254
 #define ECP_copy ECP_BN254_copy
 #define PAIR_G1mul PAIR_BN254_G1mul
 #define ECP_add ECP_BN254_add
@@ -53,6 +58,7 @@ typedef FP2_BN254 FP2;
 #define PAIR_G2mul PAIR_BN254_G2mul
 #define ECP2_add ECP2_BN254_add
 #define ECP_isinf ECP_BN254_isinf
+#define ECP_setx ECP_BN254_setx
 #define PAIR_fexp PAIR_BN254_fexp
 #define ECP2_equals ECP2_BN254_equals
 #define BIG_modmul BIG_256_56_modmul
@@ -62,6 +68,7 @@ typedef FP2_BN254 FP2;
 #define PAIR_initmp PAIR_BN254_initmp
 #define PAIR_another PAIR_BN254_another
 #define PAIR_miller PAIR_BN254_miller
+#define OCT_output OCT_BN254_output
 
 #endif
 
