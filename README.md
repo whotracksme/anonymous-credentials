@@ -7,7 +7,7 @@ can have a ***basename***, which makes two signatures done with the same credent
 The concrete implemented operations are the ones described in https://eprint.iacr.org/2015/1246
 (based on Camenisch-Lysyanskaya signatures), but without a Trusted Platform Module in the ***join*** operation (therefore, only software).
 
-For the underlying elliptic curve bilinear pairing primitives, we use [Apache Milagro Crypto Library](https://github.com/miracl/amcl).
+For the underlying elliptic curve bilinear pairing primitives, we use [MIRACL Core](https://github.com/miracl/core) (formerly known as Apache Milagro Cryptographic Library).
 Even if the core implementation is in C, we target server (NodeJS native module) and client (WebAssembly, asm.js): currently only to be used in
  a JavaScript environment. Therefore, only the JavaScript API is documented.
 
