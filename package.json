@@ -1,6 +1,6 @@
 {
   "name": "anonymous-credentials",
-  "version": "0.1.4",
+  "version": "1.0.1",
   "description": "Anonymous credentials library",
   "main": "./lib/index.js",
   "scripts": {
