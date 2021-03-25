@@ -85,7 +85,12 @@ NodeJS native module (clang and cmake required):
 
     npm run native-install
 
-WebAssembly and asm.js versions (docker without sudo required):
+Note: the following commands assume that the user can run docker without sudo.
+If that is not the case, set the following variable:
+
+    export DOCKER_NEEDS_SUDO=1
+
+WebAssembly and asm.js versions:
 
     make build-javascript-lib
 
