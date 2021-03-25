@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  main:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Install DEB Packages
+        run: sudo apt-get install llvm
+
+      - name: Build
+        run: make all
+
+      - name: Test
+        run: make test
