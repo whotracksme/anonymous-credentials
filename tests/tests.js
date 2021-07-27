@@ -154,6 +154,56 @@ function doTests(name, moduleName) {
       expect(Buffer.from(credentials).toString('base64')).to.equal('BATO7yOo0yMCtAHOVp2kc2/PFVMR9grIMnwjRngQy8/wD+bIoWWrgZs2i855ZFi1ObZoYPY6/4pg2co9ZtsgNvsEEascEj2Cbjfy3cbF1YA0qRQVYKz2M9FhOCc6Uk96+xsccJrI7SvskH62m90ddnQEhfWH7mFufXhKZ94nqYw77wQattrejw9pltMu18GquD/QAI6ftSa75kQNvpfb9Rp+axAMgN/IvyloidMxXmRfI9rPSAWKfqmlPOoX52tjlNrEBBPvi5aGLgRcQ74IMpd/leB27CIhAyBQAYK+95/TxK+lA5/LR02enh0CcRuH7l8zB2Uf6sX5F/4/jslHwJGCjeYLDjfpE0TS3FnJa1SNmfkNvRpQZk0xYLI2am3m//YfEw==');
     });
 
+    // Not a real test, but primarily for documenting a nasty bug that we have to dodge.
+    // In production, we have no code path that is affected (the servers have been
+    // upgraded to use Node 14 some time ago).
+    //
+    // I see no proper way to fix it. Maybe it gets fixed in newer versions of Node?
+    // For now, being aware of the situation is the best that I can see.
+    it('should work with native compiled code in Node 14', () => {
+      const issuer = new GroupSigner();
+      issuer.seed(new Uint8Array(128)); // <-- Note: creates an Uint8Array of size 128!
+      issuer.setupGroup();
+      let signer = new GroupSigner();
+
+      // Now passing "new Uint8Array()" or "new Uint8Array(0)" triggers a weird edge after
+      // updating from Node 12 to Node 14. I would consider it a bug, but not on our side.
+      // I think it is the same problem as described in this thread one
+      // (https://github.com/nodejs/node/issues/31061#issuecomment-568355014)
+      //
+      // > It's due to a behaviour change in V8 ArrayBuffer. Previously, when a static buffer
+      // > (or one that outlives the ArrayBuffer) is used, the BackingStore will not be registered.
+      // > Now that it is registered, problem might occur when new ArrayBuffer is allocated at the
+      // >same place of previous ArrayBuffer that is still being tracked in BackingStore table.
+      //
+      // For background, this is the change in V8 (related to ArrayBuffer without BackingStore):
+      // https://github.com/nodejs/node/pull/30782
+      //
+      // Note that the problem does not occur in production (server or WebExtension).
+      // The buffers have proper size, thus the code path to detect too small arrays
+      // is not required. In addition, the WebExtension does not run native code, but
+      // either wasm or asmjs, which both are not affected.
+
+      // For completeness, we can run all checks on non-native builds:
+      if (['wasm', 'asmjs', 'web'].includes(name)) {
+        expect(() => signer.seed(new Uint8Array())).to.throw('seed too small');
+        expect(() => signer.seed(new Uint8Array(0))).to.throw('seed too small');
+        expect(() => signer.seed(new Uint8Array(1))).to.throw('seed too small');
+      } else {
+        // Here we are in native code. This test will now fail:
+        // expect(() => signer.seed(new Uint8Array(0))).to.throw('seed too small');
+        //
+        // The reason is that "GS_seed" in group-sign.c will think it got a
+        // buffer of size 128. Or of size 129 if you change the previous code to
+        //
+        //    issuer.seed(new Uint8Array(129));
+        //
+        // To retain some test coverage, this one will always pass. It will force
+        // a new buffer to be created, so it will not reuse the last one.
+        expect(() => signer.seed(new Uint8Array(1))).to.throw('seed too small');
+      }
+    });
+
     it('errors', () => {
       const issuer = new GroupSigner();
       issuer.seed(new Uint8Array(128));
@@ -169,7 +219,13 @@ function doTests(name, moduleName) {
       const buffer2 = (new Uint32Array(128)).buffer;
       expect(() => signer.seed(buffer1)).to.throw('input data must be uint8array');
       expect(() => signer.seed(buffer2)).to.throw('input data must be uint8array');
-      expect(() => signer.seed(new Uint8Array())).to.throw('seed too small');
+
+      // Note: to understand why the following assertion will break on native code
+      // with Node 14, see the previous test (on "native compiled code in Node 14").
+      if (['wasm', 'asmjs', 'web'].includes(name)) {
+        expect(() => signer.seed(new Uint8Array())).to.throw('seed too small');
+      }
+      expect(() => signer.seed(new Uint8Array(1))).to.throw('seed too small');
       expect(() => signer.seed(new Uint8Array(127))).to.throw('seed too small');
 
       // setupGroup
@@ -260,7 +316,7 @@ function doTests(name, moduleName) {
       expect(() => signer.startJoin()).to.throw('expected 1 arguments');
       expect(() => signer.startJoin(1, 2)).to.throw('expected 1 arguments');
       expect(() => signer.startJoin(1)).to.throw('input data must be uint8array');
-      expect(() => signer.startJoin(new Uint8Array())).to.throw('not seeded');
+      expect(() => signer.startJoin(new Uint8Array(1))).to.throw('not seeded');
 
       // finishJoin
       signer = new GroupSigner();
@@ -268,11 +324,13 @@ function doTests(name, moduleName) {
       expect(() => signer.finishJoin(1)).to.throw('expected 3 arguments');
       expect(() => signer.finishJoin(1, 2)).to.throw('expected 3 arguments');
       expect(() => signer.finishJoin(1, 2, 3, 4)).to.throw('expected 3 arguments');
-      expect(() => signer.finishJoin(new Uint8Array(), new Uint8Array(), 3)).to.throw('input data must be uint8array');
-      expect(() => signer.finishJoin(new Uint8Array(), new Uint8Array(), new Uint8Array())).to.throw('invalid group public key');
-      expect(() => signer.finishJoin(verifier.getGroupPubKey(), new Uint8Array(), new Uint8Array())).to.throw('invalid user private key');
+      expect(() => signer.finishJoin(new Uint8Array(1), new Uint8Array(1), 3)).to.throw('input data must be uint8array');
+      expect(() => signer.finishJoin(new Uint8Array(1), new Uint8Array(1), new Uint8Array(1))).to.throw('invalid group public key');
+
+      expect(() => signer.finishJoin(verifier.getGroupPubKey(), new Uint8Array(1), new Uint8Array(1))).to.throw('invalid user private key');
+
       signer.seed(new Uint8Array(128));
-      expect(() => signer.finishJoin(verifier.getGroupPubKey(), signer.startJoin(new Uint8Array()).gsk, new Uint8Array(1024))).to.throw('invalid join response');
+      expect(() => signer.finishJoin(verifier.getGroupPubKey(), signer.startJoin(new Uint8Array(1)).gsk, new Uint8Array(1024))).to.throw('invalid join response');
     });
 
     /**
