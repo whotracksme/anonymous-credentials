@@ -17,7 +17,7 @@ function GroupSigner() {
 
   // Avoid storing state in Module heap
   this.stateSize = Module._GS_getStateSize();
-  var state = _malloc(this.stateSize);
+  var state = Module._malloc(this.stateSize);
   Module._GS_initState(state);
   this._updateState(state);
   _free(state);
@@ -41,7 +41,7 @@ if (Module['calledRun']) {
 
 GroupSigner.prototype._getBuffer = function() {
   // TODO: reduce the conservative upper bound BUFFER_SIZE
-  const buffer = _malloc(BUFFER_SIZE);
+  const buffer = Module._malloc(BUFFER_SIZE);
   this.buffers.push(buffer);
   return buffer;
 }
