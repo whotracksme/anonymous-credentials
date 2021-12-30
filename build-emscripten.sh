@@ -9,7 +9,7 @@ DISTFOLDER="$SCRIPTPATH/dist"
 
 if [ -z "$EMSCRIPTEN" ]
 then
-  EMSCRIPTEN_PATH=${EMSCRIPTEN_PATH:-~/emsdk}
+  EMSCRIPTEN_PATH=${EMSCRIPTEN_PATH:-/emsdk}
 
   if [ ! -f "$EMSCRIPTEN_PATH/emsdk_env.sh" ]; then
       echo "emscripten installation not found" ;
@@ -80,5 +80,7 @@ EMFLAGS=${!EMFLAGS}
        '_GS_success', \
        '_GS_failure', \
        '_GS_error', \
-       '_GS_getStateSize']")
+       '_GS_getStateSize', \
+       '_malloc', \
+       '_free']")
 done

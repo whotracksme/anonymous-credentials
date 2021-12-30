@@ -1,5 +1,4 @@
-FROM trzeci/emscripten:sdk-tag-1.38.32-64bit@sha256:f352ee6980d98338453f3c6cf6beb79142fcb77e73198b7de170edc88f25d36b
-RUN apt-get update && apt-get install -y python3
+FROM emscripten/emsdk@sha256:a4500d8b42b09a255c9517a06b019de52334b0f05af3f0b62529f27e83ff5247
 RUN mkdir /group-sign
 COPY . /group-sign
 WORKDIR /group-sign
