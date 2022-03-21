@@ -8,7 +8,7 @@ endif
 
 .PHONY:
 all: build-javascript-lib
-	npm install && npm run native-install
+	npm ci && npm run native-install
 
 .PHONY:
 build-javascript-lib:
